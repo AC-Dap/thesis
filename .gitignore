@@ -1,0 +1,4 @@
+.ipynb_checkpoints
+*.ipynb
+data/AOL-user-ct-collection/*
+!data/AOL-user-ct-collection/info.txt
