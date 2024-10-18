@@ -18,6 +18,7 @@ import numpy as np
 import math
 import pandas as pd
 from multiprocessing.pool import ThreadPool
+from tqdm.notebook import tqdm, trange
 import time
 import heapq
 
@@ -53,7 +54,7 @@ class CountSketchTopK:
     def __init__(self, width: int, depth: int, k: int):
         self.width = width
         self.depth = depth
-        self.sketch = np.zeros((self.depth, self.width), dtype=int)
+        self.sketch = np.zeros((self.depth, self.width), dtype=float)
         self.hash_functions = [self._generate_hash_function() for _ in range(self.depth)]
         self.sign_functions = [self._generate_sign_function() for _ in range(self.depth)]
         self.heap = []
@@ -109,19 +110,22 @@ class CountSketchTopK:
     def heavy_hitters(self) -> List[Any]:
         return [heap_item[1] for heap_item in self.heap]
 
+    def space_size(self) -> int:
+        return self.width * self.depth + self.k
+
 
 # %%
 class PPSWOR:
     def __init__(self, k: int):
         self.k = k
-        self.cs = CountSketchTopK(int(10/0.05**2), 15, k+1)
+        self.cs = CountSketchTopK(int(10/0.05**2), 7, k+1)
         self.seed = self._generate_seed()
 
     def _generate_seed(self):
         hashes = generate_hash_function()
         for item, h in hashes.items():
             rng = np.random.default_rng(h)
-            hashes[item] = rng.exponential()
+            hashes[item] = rng.exponential(1)
         return hashes
 
     def update(self, item: Any, count: int = 1) -> None:
@@ -129,10 +133,13 @@ class PPSWOR:
         self.cs.update(item, w_x)
 
     def sample(self) -> Tuple[List[Any], List[float]]:
-        tau = heapq.heappop(self.cs.heap)[0]
+        tau = self.cs.heap[0][0]
         sample = np.array([self.cs.estimate(item) * np.sqrt(self.seed[item]) for item in self.cs.heavy_hitters()])
-        sample_probs = 1 - np.exp(-(sample/tau)**2)
-        return sample, sample_probs
+        sample_probs = 1 - np.exp(-((sample/tau)**2))
+        return sample[1:], sample_probs[1:]
+
+    def space_size(self) -> int:
+        return self.cs.space_size()
 
 
 # %%
@@ -218,6 +225,9 @@ class SampleWithAdvice:
 
         return np.concatenate((sample_h, sample_p, sample_u)), np.concatenate((sample_h_probs, sample_p_probs, sample_u_probs))
 
+    def space_size(self):
+        return self.kh + self.kp + self.ku
+
 
 # %%
 ### Experiments
@@ -237,61 +247,76 @@ for _, query in df['Query'].items():
     sketch.update(query)
     cs.update(query)
 
-# ppswor_sample, ppswor_sample_probs = sketch.sample()
-# ppswor_sample_items = sketch.cs.heavy_hitters()
-# print(estimate_norm(ppswor_sample, ppswor_sample_probs))
+# %%
+ppswor_sample, ppswor_sample_probs = sketch.sample()
+ppswor_sample_items = sketch.cs.heavy_hitters()
+print(estimate_norm(ppswor_sample, ppswor_sample_probs))
 
-# t = PrettyTable(["query", "count", "sample_prob"])
-# for i in range(100):
-#     t.add_row([ppswor_sample_items[i], ppswor_sample[i], ppswor_sample_probs[i]])
+t = PrettyTable(["query", "count", "est_count", "sample_prob"])
+for i in range(100):
+    item = ppswor_sample_items[i]
+    t.add_row([item, unique_counts[item], ppswor_sample[i], ppswor_sample_probs[i]])
 
-t = PrettyTable(["query", "count"])
-for item in cs.heavy_hitters():
-    t.add_row([item, cs.estimate(item)])
+# t = PrettyTable(["query", "count", "est_count", "seed", "sample_prob"])
+# for item, count in unique_counts.iloc[:100].items():
+#     sample = sketch.cs.estimate(item) * np.sqrt(sketch.seed[item])
+#     seed = sketch.seed[item]
+#     tau = sketch.cs.heap[0][0]
+#     sample_prob = 1 - np.exp(-((sample/tau)**2))
+#     t.add_row([item, count, sample, seed, sample_prob])
+
+# t = PrettyTable(["query", "count"])
+# for item in cs.heavy_hitters():
+#     t.add_row([item, cs.estimate(item)])
+
+# for i in range(sketch.cs.depth):
+#     j = sketch.cs.hash_functions[i]['-']
+#     s = sketch.cs.sign_functions[i]['-']
+#     print(s * sketch.cs.sketch[i, j])
 
 print(t.get_string(sortby="count", reversesort=True))
 
 
 # %%
-def get_ppswor_estimate(df, pos):
-    start = time.time()
+def get_ppswor_estimate(pbar):
     sketch = PPSWOR(100)
     for _, query in df['Query'].items():
         sketch.update(query)
+        pbar.update()
     ppswor_sample, ppswor_sample_probs = sketch.sample()
-    end = time.time()
-    print(f"Time elapsed for run {pos}: {end-start}")
     return estimate_norm(ppswor_sample, ppswor_sample_probs)
 
 n_sims = 10
-with ThreadPool(processes=2) as pool:
-    all_res = [pool.apply_async(get_ppswor_estimate, (df, i)) for i in range(n_sims)]
-    estimates = [res.get() for res in all_res]
-    print(estimates)
-    print("PPSWOR Mean:", np.mean(estimates))
-    print("PPSWOR MSE:", np.mean((estimates - actual_value)**2))
-    pool.close()
-    pool.join()
+pbar = tqdm(total=len(df['Query']), position=1)
+estimates = np.empty(n_sims)
+for i in trange(n_sims, position=0):
+    pbar.reset()
+    estimates[i] = get_ppswor_estimate(pbar)
+    pbar.refresh()
+pbar.close()
+print(estimates)
+print("PPSWOR Mean:", np.mean(estimates))
+print("PPSWOR MSE:", np.mean((estimates - actual_value)**2))
 
 
 # %%
-def get_swa_estimate(df, pos):
-    start = time.time()
+def get_swa_estimate(pbar):
     oracle = FrequencyOracle(0.1, df)
     swa = SampleWithAdvice(10, 60, 30, oracle)
     for _, query in df['Query'].items():
         swa.update(query)
+        pbar.update()
     swa_sample, swa_sample_probs = swa.sample()
-    end = time.time()
-    print(f"Time elapsed for run {pos}: {end-start}")
     return estimate_norm(swa_sample, swa_sample_probs)
 
 n_sims = 10
-with ThreadPool() as pool:
-    all_res = [pool.apply_async(get_swa_estimate, (df, i)) for i in range(n_sims)]
-    estimates = [res.get() for res in all_res]
-    print(estimates)
-    print("SWA Mean:", np.mean(estimates))
-    print("SWA MSE:", np.mean((estimates - actual_value)**2))
-    pool.close()
-    pool.join()
+pbar = tqdm(total=len(df['Query']), position=1)
+estimates = np.empty(n_sims)
+for i in trange(n_sims, position=0):
+    pbar.reset()
+    estimates[i] = get_swa_estimate(pbar)
+    pbar.refresh()
+pbar.close()
+print(estimates)
+print("SWA Mean:", np.mean(estimates))
+print("SWA MSE:", np.mean((estimates - actual_value)**2))
