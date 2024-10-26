@@ -21,14 +21,18 @@ from multiprocessing.pool import ThreadPool
 from tqdm.notebook import tqdm, trange
 import time
 import heapq
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from typing import List, Any, Tuple
+
+sns.set()
 
 # %%
 ### Load data
 _df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
 _df['Query'] = _df['Query'].fillna("")
-df = _df.sample(100000)
+df = _df[_df['Query'] != '-'].sample(100000)
 df.head()
 
 # %%
@@ -60,6 +64,12 @@ class CountSketchTopK:
         self.heap = []
         self.k = k
 
+    def reset(self):
+        self.sketch.fill(0)
+        self.hash_functions = [self._generate_hash_function() for _ in range(self.depth)]
+        self.sign_functions = [self._generate_sign_function() for _ in range(self.depth)]
+        self.heap = []
+    
     def _generate_hash_function(self):
         hashes = generate_hash_function()
         for item, h in hashes.items():
@@ -116,11 +126,16 @@ class CountSketchTopK:
 
 # %%
 class PPSWOR:
-    def __init__(self, k: int):
+    def __init__(self, k: int, deg: int):
         self.k = k
+        self.deg = deg
         self.cs = CountSketchTopK(int(10/0.05**2), 7, k+1)
         self.seed = self._generate_seed()
 
+    def reset(self):
+        self.cs.reset()
+        self.seed = self._generate_seed()
+    
     def _generate_seed(self):
         hashes = generate_hash_function()
         for item, h in hashes.items():
@@ -129,13 +144,13 @@ class PPSWOR:
         return hashes
 
     def update(self, item: Any, count: int = 1) -> None:
-        w_x = count / np.sqrt(self.seed[item])
+        w_x = count / (self.seed[item] ** (1./self.deg))
         self.cs.update(item, w_x)
 
     def sample(self) -> Tuple[List[Any], List[float]]:
         tau = self.cs.heap[0][0]
-        sample = np.array([self.cs.estimate(item) * np.sqrt(self.seed[item]) for item in self.cs.heavy_hitters()])
-        sample_probs = 1 - np.exp(-((sample/tau)**2))
+        sample = np.array([self.cs.estimate(item) * (self.seed[item] ** (1./self.deg)) for item in self.cs.heavy_hitters()])
+        sample_probs = 1 - np.exp(-((sample/tau)**self.deg))
         return sample[1:], sample_probs[1:]
 
     def space_size(self) -> int:
@@ -149,7 +164,12 @@ class FrequencyOracle:
     uniform estimate between [(1-ep)*c, (1+ep)*c]
     """
     def __init__(self, ep: float, dataset):
+        self.ep = ep
+        self.dataset = dataset
         self.estimates = self._generate_estimates(ep, dataset)
+
+    def reset(self):
+        self.estimates = self._generate_estimates(self.ep, self.dataset)
 
     def _generate_estimates(self, ep: float, df):
         estimates = {}
@@ -165,11 +185,19 @@ class FrequencyOracle:
 
 # %%
 class SampleWithAdvice:
-    def __init__(self, kh, ku, kp, oracle: FrequencyOracle):
+    def __init__(self, kh, kp, ku, deg: int, oracle: FrequencyOracle):
         self.oracle = oracle
-        self.kh = kh
-        self.ku = ku
-        self.kp = kp
+        self.kh = int(kh)
+        self.kp = int(kp)
+        self.ku = int(ku)
+        self.deg = deg
+        # Top k heaps
+        self.h_heap = []
+        self.p_heap = []
+        self.u_heap = []
+        self.seed = self._generate_seed()
+
+    def reset(self):
         self.h_heap = []
         self.p_heap = []
         self.u_heap = []
@@ -183,6 +211,9 @@ class SampleWithAdvice:
         return hashes
 
     def _try_insert(self, item, heap, k):
+        """
+        Add item into heap and maintain the top k elements
+        """
         if len(heap) < k:
             heapq.heappush(heap, item)
             return None
@@ -203,7 +234,7 @@ class SampleWithAdvice:
         if overflow is None: return
         else: item, count = overflow[1], overflow[2]
 
-        weight = self.oracle.estimate(item)**2 / self.seed[item]
+        weight = self.oracle.estimate(item)**self.deg / self.seed[item]
         overflow = self._try_insert((weight, item, count), self.p_heap, self.kp + 1)
         if overflow is None: return
         else: item, count = overflow[1], overflow[2]
@@ -212,15 +243,15 @@ class SampleWithAdvice:
         self._try_insert((weight, item, count), self.u_heap, self.ku + 1)
 
     def sample(self):
-        sample_h = np.array([item[2] for item in self.h_heap])
+        sample_h = np.array([item[2] for item in self.h_heap], dtype=float)
         sample_h_probs = np.ones(self.kh)
 
         tau = heapq.heappop(self.p_heap)[0]
-        sample_p = np.array([item[2] for item in self.p_heap])
-        sample_p_probs = np.array([1 - np.exp(-self.oracle.estimate(item[1])**2 / tau) for item in self.p_heap])
+        sample_p = np.array([item[2] for item in self.p_heap], dtype=float)
+        sample_p_probs = np.array([1 - np.exp(-(self.oracle.estimate(item[1])**self.deg / tau)) for item in self.p_heap])
 
         tau = -heapq.heappop(self.u_heap)[0]
-        sample_u = np.array([item[2] for item in self.u_heap])
+        sample_u = np.array([item[2] for item in self.u_heap], dtype=float)
         sample_u_probs = np.full(self.ku, 1 - np.exp(-tau))
 
         return np.concatenate((sample_h, sample_p, sample_u)), np.concatenate((sample_h_probs, sample_p_probs, sample_u_probs))
@@ -231,92 +262,161 @@ class SampleWithAdvice:
 
 # %%
 ### Experiments
-actual_value = np.linalg.norm(unique_counts)
-print("Actual L2 Norm:", actual_value)
+deg = 4
 
-def estimate_norm(weights, sample_probs):
-    return np.sqrt(np.sum(weights**2 / sample_probs))
+actual_value = np.sum(unique_counts**deg)
+print(f"Actual {deg} Moment:", actual_value)
 
-
-# %%
-from prettytable import PrettyTable
-
-cs = CountSketchTopK(int(10/0.05**2), 15, 100)
-sketch = PPSWOR(100)
-for _, query in df['Query'].items():
-    sketch.update(query)
-    cs.update(query)
-
-# %%
-ppswor_sample, ppswor_sample_probs = sketch.sample()
-ppswor_sample_items = sketch.cs.heavy_hitters()
-print(estimate_norm(ppswor_sample, ppswor_sample_probs))
-
-t = PrettyTable(["query", "count", "est_count", "sample_prob"])
-for i in range(100):
-    item = ppswor_sample_items[i]
-    t.add_row([item, unique_counts[item], ppswor_sample[i], ppswor_sample_probs[i]])
-
-# t = PrettyTable(["query", "count", "est_count", "seed", "sample_prob"])
-# for item, count in unique_counts.iloc[:100].items():
-#     sample = sketch.cs.estimate(item) * np.sqrt(sketch.seed[item])
-#     seed = sketch.seed[item]
-#     tau = sketch.cs.heap[0][0]
-#     sample_prob = 1 - np.exp(-((sample/tau)**2))
-#     t.add_row([item, count, sample, seed, sample_prob])
-
-# t = PrettyTable(["query", "count"])
-# for item in cs.heavy_hitters():
-#     t.add_row([item, cs.estimate(item)])
-
-# for i in range(sketch.cs.depth):
-#     j = sketch.cs.hash_functions[i]['-']
-#     s = sketch.cs.sign_functions[i]['-']
-#     print(s * sketch.cs.sketch[i, j])
-
-print(t.get_string(sortby="count", reversesort=True))
+def estimate_moment(weights, sample_probs, deg):
+    return np.sum(weights**deg / sample_probs)
 
 
 # %%
-def get_ppswor_estimate(pbar):
-    sketch = PPSWOR(100)
+estimate_moment(unique_counts[:10], 1, deg)
+
+
+# %%
+def get_ppswor_estimate(sketch, deg):
+    sketch.reset()
     for _, query in df['Query'].items():
         sketch.update(query)
-        pbar.update()
     ppswor_sample, ppswor_sample_probs = sketch.sample()
-    return estimate_norm(ppswor_sample, ppswor_sample_probs)
+    return estimate_moment(ppswor_sample, ppswor_sample_probs, deg)
 
-n_sims = 10
-pbar = tqdm(total=len(df['Query']), position=1)
-estimates = np.empty(n_sims)
-for i in trange(n_sims, position=0):
-    pbar.reset()
-    estimates[i] = get_ppswor_estimate(pbar)
-    pbar.refresh()
-pbar.close()
-print(estimates)
+def get_ppswor_simulation_results(sketch_size, deg, n_sims=10):
+    # Still do L2 Norm PPSWOR sampling
+    sketch = PPSWOR(sketch_size, 2)
+    estimates = np.empty(n_sims)
+    for i in trange(n_sims):
+        estimates[i] = get_ppswor_estimate(sketch, deg)
+
+    # mean = np.mean(estimates)
+    # mse = np.mean((estimates - actual_value)**2)
+    space_size = sketch.space_size()
+    
+    return estimates, space_size
+
+estimates, space_size = get_ppswor_simulation_results(10, deg)
 print("PPSWOR Mean:", np.mean(estimates))
 print("PPSWOR MSE:", np.mean((estimates - actual_value)**2))
+print("PPSWOR Size:", space_size)
 
 
 # %%
-def get_swa_estimate(pbar):
-    oracle = FrequencyOracle(0.1, df)
-    swa = SampleWithAdvice(10, 60, 30, oracle)
+def get_swa_estimate(oracle, swa, deg):
+    oracle.reset()
+    swa.reset()
     for _, query in df['Query'].items():
         swa.update(query)
-        pbar.update()
     swa_sample, swa_sample_probs = swa.sample()
-    return estimate_norm(swa_sample, swa_sample_probs)
+    return estimate_moment(swa_sample, swa_sample_probs, deg)
 
-n_sims = 10
-pbar = tqdm(total=len(df['Query']), position=1)
-estimates = np.empty(n_sims)
-for i in trange(n_sims, position=0):
-    pbar.reset()
-    estimates[i] = get_swa_estimate(pbar)
-    pbar.refresh()
-pbar.close()
-print(estimates)
+def get_swa_simulation_results(ep, kh, kp, ku, deg, n_sims=10):
+    oracle = FrequencyOracle(ep, df)
+    swa = SampleWithAdvice(kh, kp, ku, deg, oracle)
+    estimates = np.empty(n_sims)
+    for i in trange(n_sims):
+        estimates[i] = get_swa_estimate(oracle, swa, deg)
+
+    # mean = np.mean(estimates)
+    # mse = np.mean((estimates - actual_value)**2)
+    space_size = swa.space_size()
+
+    return estimates, space_size
+
+estimates, space_size = get_swa_simulation_results(0.1, 0, 10, 0, deg, 10)
 print("SWA Mean:", np.mean(estimates))
 print("SWA MSE:", np.mean((estimates - actual_value)**2))
+print("SWA Size:", space_size)
+
+# %%
+sample_sizes = [10, 20, 30, 40, 50]
+n_sims = 20
+
+ppswor_results, ppswor_sizes = np.empty((len(sample_sizes), n_sims)), np.empty(len(sample_sizes))
+swa_1_results, swa_1_sizes = np.empty((len(sample_sizes), n_sims)), np.empty(len(sample_sizes))
+swa_2_results, swa_2_sizes = np.empty((len(sample_sizes), n_sims)), np.empty(len(sample_sizes))
+swa_3_results, swa_3_sizes = np.empty((len(sample_sizes), n_sims)), np.empty(len(sample_sizes))
+swa_4_results, swa_4_sizes = np.empty((len(sample_sizes), n_sims)), np.empty(len(sample_sizes))
+
+for i, sample_size in enumerate(tqdm(sample_sizes)):
+    ppswor_results[i, :], ppswor_sizes[i] = get_ppswor_simulation_results(sample_size, deg, n_sims)
+    swa_1_results[i,:], swa_1_sizes[i] = get_swa_simulation_results(0.1, 0, sample_size, 0, deg, n_sims)
+    swa_2_results[i,:], swa_2_sizes[i] = get_swa_simulation_results(0.1, 0, sample_size/2, sample_size/2, deg, n_sims)
+    swa_3_results[i,:], swa_3_sizes[i] = get_swa_simulation_results(0.1, 4, sample_size - 4, 0, deg, n_sims)
+    swa_4_results[i,:], swa_4_sizes[i] = get_swa_simulation_results(0.1, 4, (sample_size-4)/2, (sample_size - 4)/2, deg, n_sims)
+
+np.savez('freq_sketch_sim_results_4th_moment.npz',
+         ppswor_results=ppswor_results, ppswor_sizes=ppswor_sizes,
+         swa_1_results=swa_1_results, swa_1_sizes=swa_1_sizes,
+         swa_2_results=swa_2_results, swa_2_sizes=swa_2_sizes,
+         swa_3_results=swa_3_results, swa_3_sizes=swa_3_sizes,
+         swa_4_results=swa_4_results, swa_4_sizes=swa_4_sizes)
+
+# %%
+sample_size = 50
+eps = [0.1, 0.2, 0.3, 0.4, 0.5]
+n_sims = 20
+
+swa_1_ep_results, swa_1_eps = np.empty((len(eps), n_sims)), np.empty(len(eps))
+swa_2_ep_results, swa_2_eps = np.empty((len(eps), n_sims)), np.empty(len(eps))
+swa_3_ep_results, swa_3_eps = np.empty((len(eps), n_sims)), np.empty(len(eps))
+swa_4_ep_results, swa_4_eps = np.empty((len(eps), n_sims)), np.empty(len(eps))
+
+for i, ep in enumerate(tqdm(eps)):
+    swa_1_ep_results[i,:], swa_1_eps[i] = get_swa_simulation_results(ep, 0, sample_size, 0, deg, n_sims)
+    swa_2_ep_results[i,:], swa_2_eps[i] = get_swa_simulation_results(ep, 0, sample_size/2, sample_size/2, deg, n_sims)
+    swa_3_ep_results[i,:], swa_3_eps[i] = get_swa_simulation_results(ep, 4, sample_size - 4, 0, deg, n_sims)
+    swa_4_ep_results[i,:], swa_4_eps[i] = get_swa_simulation_results(ep, 4, (sample_size-4)/2, (sample_size - 4)/2, deg, n_sims)
+
+np.savez('freq_sketch_sim_results_4th_moment_ep.npz',
+         swa_1_ep_results=swa_1_ep_results, swa_1_eps=swa_1_eps,
+         swa_2_ep_results=swa_2_ep_results, swa_2_eps=swa_2_eps,
+         swa_3_ep_results=swa_3_ep_results, swa_3_eps=swa_3_eps,
+         swa_4_ep_results=swa_4_ep_results, swa_4_eps=swa_4_eps)
+
+
+# %%
+def plot_curve(ax, results, space, label, color):
+    error = (results - actual_value) / actual_value
+    mean = np.mean(error, axis=1)
+    # mse = np.mean((results - actual_value)**2, axis=1)
+    lower = np.quantile(error, 0.05, axis=1)
+    upper = np.quantile(error, 0.95, axis=1)
+    
+    ax.plot(space, mean, label=label, color=color)
+    ax.fill_between(space, lower, upper, color=color, alpha=0.2)
+    ax.legend()
+
+fig, ax = plt.subplots(1, 5, sharey=True, figsize=(12, 4))
+
+plot_curve(ax[0], ppswor_results, sample_sizes, "PPSWOR", 'b')
+
+plot_curve(ax[1], swa_1_results, sample_sizes, "SWA 1", 'b')
+plot_curve(ax[2], swa_2_results, sample_sizes, "SWA 2", 'r')
+plot_curve(ax[3], swa_3_results, sample_sizes, "SWA 3", 'g')
+plot_curve(ax[4], swa_4_results, sample_sizes, "SWA 4", 'y')
+
+# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+
+fig.supxlabel('Sample size')
+fig.supylabel('3rd Moment Estimate Error')
+
+plt.show()
+
+# %%
+fig, ax = plt.subplots(1, 4, sharey=True, figsize=(12, 4))
+
+plot_curve(ax[0], swa_1_ep_results, eps, "SWA 1", 'b')
+plot_curve(ax[1], swa_2_ep_results, eps, "SWA 2", 'r')
+plot_curve(ax[2], swa_3_ep_results, eps, "SWA 3", 'g')
+plot_curve(ax[3], swa_4_ep_results, eps, "SWA 4", 'y')
+
+# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+
+fig.supxlabel('Oracle Error Bound')
+fig.supylabel('3rd Moment Estimate Error')
+
+plt.show()
