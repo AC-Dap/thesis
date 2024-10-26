@@ -40,6 +40,15 @@ unique_counts = df['Query'].value_counts()
 unique_counts
 
 # %%
+plt.plot(np.arange(len(unique_counts)), unique_counts)
+plt.xlabel('Rank')
+plt.ylabel('Frequency')
+plt.xscale('log')
+plt.yscale('log')
+plt.title('Rank vs. Frequency of search results')
+plt.savefig('figs/aol_rank_frequency')
+
+# %%
 hash_rng = np.random.default_rng()
 query_items = df['Query'].unique()
 def generate_hash_function():
@@ -262,7 +271,7 @@ class SampleWithAdvice:
 
 # %%
 ### Experiments
-deg = 4
+deg = 3
 
 actual_value = np.sum(unique_counts**deg)
 print(f"Actual {deg} Moment:", actual_value)
@@ -298,7 +307,7 @@ def get_ppswor_simulation_results(sketch_size, deg, n_sims=10):
 
 estimates, space_size = get_ppswor_simulation_results(10, deg)
 print("PPSWOR Mean:", np.mean(estimates))
-print("PPSWOR MSE:", np.mean((estimates - actual_value)**2))
+print("PPSWOR MSE:", np.sqrt(np.mean((estimates - actual_value)**2)))
 print("PPSWOR Size:", space_size)
 
 
@@ -326,7 +335,7 @@ def get_swa_simulation_results(ep, kh, kp, ku, deg, n_sims=10):
 
 estimates, space_size = get_swa_simulation_results(0.1, 0, 10, 0, deg, 10)
 print("SWA Mean:", np.mean(estimates))
-print("SWA MSE:", np.mean((estimates - actual_value)**2))
+print("SWA MSE:", np.sqrt(np.mean((estimates - actual_value)**2)))
 print("SWA Size:", space_size)
 
 # %%
@@ -375,6 +384,29 @@ np.savez('freq_sketch_sim_results_4th_moment_ep.npz',
          swa_3_ep_results=swa_3_ep_results, swa_3_eps=swa_3_eps,
          swa_4_ep_results=swa_4_ep_results, swa_4_eps=swa_4_eps)
 
+# %%
+with np.load('freq_sketch_sim_results_3rd_moment.npz') as data:
+    ppswor_results=data['ppswor_results']
+    ppswor_sizes=data['ppswor_sizes']
+    swa_1_results=data['swa_1_results']
+    swa_1_sizes=data['swa_1_sizes']
+    swa_2_results=data['swa_2_results']
+    swa_2_sizes=data['swa_2_sizes']
+    swa_3_results=data['swa_3_results']
+    swa_3_sizes=data['swa_3_sizes']
+    swa_4_results=data['swa_4_results']
+    swa_4_sizes=data['swa_4_sizes']
+
+with np.load('freq_sketch_sim_results_3rd_moment_ep.npz') as data:
+    swa_1_ep_results=data['swa_1_ep_results']
+    swa_1_eps=data['swa_1_eps']
+    swa_2_ep_results=data['swa_2_ep_results']
+    swa_2_eps=data['swa_2_eps']
+    swa_3_ep_results=data['swa_3_ep_results']
+    swa_3_eps=data['swa_3_eps']
+    swa_4_ep_results=data['swa_4_ep_results']
+    swa_5_eps=data['swa_4_eps']
+
 
 # %%
 def plot_curve(ax, results, space, label, color):
@@ -388,35 +420,39 @@ def plot_curve(ax, results, space, label, color):
     ax.fill_between(space, lower, upper, color=color, alpha=0.2)
     ax.legend()
 
-fig, ax = plt.subplots(1, 5, sharey=True, figsize=(12, 4))
+fig, ax = plt.subplots(1, 5, sharey=True, figsize=(12, 5))
 
 plot_curve(ax[0], ppswor_results, sample_sizes, "PPSWOR", 'b')
 
-plot_curve(ax[1], swa_1_results, sample_sizes, "SWA 1", 'b')
-plot_curve(ax[2], swa_2_results, sample_sizes, "SWA 2", 'r')
-plot_curve(ax[3], swa_3_results, sample_sizes, "SWA 3", 'g')
-plot_curve(ax[4], swa_4_results, sample_sizes, "SWA 4", 'y')
+plot_curve(ax[1], swa_1_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
+plot_curve(ax[2], swa_2_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = k_p$", 'r')
+plot_curve(ax[3], swa_3_results, sample_sizes, "SWA: $k_h = 4$,\n$k_u = 0$", 'g')
+plot_curve(ax[4], swa_4_results, sample_sizes, "SWA: $k_h = 4$,\n$k_u = k_p$", 'y')
 
 # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
 # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
 
 fig.supxlabel('Sample size')
-fig.supylabel('3rd Moment Estimate Error')
+fig.supylabel('3rd Moment Estimation Error')
+fig.suptitle('3rd Moment Estimation Error vs. Sample Size')
 
+plt.savefig('figs/freq_sketch_sim_3rd_moment')
 plt.show()
 
 # %%
-fig, ax = plt.subplots(1, 4, sharey=True, figsize=(12, 4))
+fig, ax = plt.subplots(2, 2, sharey=True, figsize=(8, 8))
 
-plot_curve(ax[0], swa_1_ep_results, eps, "SWA 1", 'b')
-plot_curve(ax[1], swa_2_ep_results, eps, "SWA 2", 'r')
-plot_curve(ax[2], swa_3_ep_results, eps, "SWA 3", 'g')
-plot_curve(ax[3], swa_4_ep_results, eps, "SWA 4", 'y')
+plot_curve(ax[0][0], swa_1_ep_results, eps, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
+plot_curve(ax[0][1], swa_2_ep_results, eps, "SWA: $k_h = 0$,\n$k_u = k_p$", 'r')
+plot_curve(ax[1][0], swa_3_ep_results, eps, "SWA: $k_h = 4$,\n$k_u = 0$", 'g')
+plot_curve(ax[1][1], swa_4_ep_results, eps, "SWA: $k_h = 4$,\n$k_u = k_p$", 'y')
 
 # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
 # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
 
 fig.supxlabel('Oracle Error Bound')
 fig.supylabel('3rd Moment Estimate Error')
+fig.suptitle('3rd Moment Estimation Error vs. Oracle Error Bound')
 
+plt.savefig('figs/freq_sketch_sim_3rd_moment_ep')
 plt.show()
