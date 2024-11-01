@@ -1,0 +1,23 @@
+#ifndef FAKE_SWA_H
+#define FAKE_SWA_H
+
+#include <unordered_set>
+#include <vector>
+#include <string>
+#include <tuple>
+
+#include "mock_oracle.h"
+
+using namespace std;
+
+/**
+ * We note that a SWA sample does not depend on the order of items received.
+ * This means we can directly generate a sample without needing to simulate the data stream.
+ *
+ * We pass `items` by value, since we will modify it.
+ */
+tuple<vector<string>, vector<double>, vector<double>> fake_swa_sample(
+    size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle,
+    unordered_set<string>& items, unordered_map<string, size_t>& item_counts);
+
+#endif
