@@ -19,7 +19,7 @@ void CountSketch::reset() {
     reset_hashes();
 }
 
-void CountSketch::update(std::string &item, double count) {
+void CountSketch::update(const string* item, double count) {
     // Update sketch counts
     for(int i = 0; i < depth; i++) {
         int j = hashes[i][item];
@@ -50,7 +50,7 @@ void CountSketch::update(std::string &item, double count) {
     }
 }
 
-double CountSketch::estimate(std::string &item) {
+double CountSketch::estimate(const string* item) {
     // Get estimates from each row
     for(int i = 0; i < depth; i++) {
         int j = hashes[i][item];
@@ -64,8 +64,8 @@ double CountSketch::estimate(std::string &item) {
     return _estimates[n];
 }
 
-vector<string> CountSketch::heavy_hitters() {
-    vector<string> hh(k);
+vector<const string*> CountSketch::heavy_hitters() {
+    vector<const string*> hh(k);
     for(int i = 0; i < top_k.len; i++) {
         hh[i] = get<1>(top_k.heap[i]);
     }

@@ -5,9 +5,11 @@
 #include <unordered_map>
 #include <string>
 
+#include "dataset.h"
+
 using namespace std;
 
-inline size_t exact_moment(unordered_map<string, size_t>& item_counts, size_t deg) {
+inline size_t exact_moment(DatasetItemCounts& item_counts, size_t deg) {
     size_t sum = 0;
     for(auto& item : item_counts) {
         sum += pow(item.second, deg);

@@ -2,3 +2,4 @@
 *.ipynb
 data/AOL-user-ct-collection/*
 !data/AOL-user-ct-collection/info.txt
+simulation/out

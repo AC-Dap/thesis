@@ -12,16 +12,16 @@
 using namespace std;
 
 struct CountSketch {
-    CountSketch(int width, int depth, int k, unordered_set<string>& items)
+    CountSketch(int width, int depth, int k, Dataset& ds)
         : width(width), depth(depth), k(k), sketch(depth, vector<double>(width, 0)),
-            _estimates(depth), top_k(k), hashes(depth), signs(depth), items(items) {
+            _estimates(depth), top_k(k), hashes(depth), signs(depth), ds(ds) {
         reset_hashes();
     }
 
     void reset();
-    void update(string& item, double count);
-    double estimate(string& item);
-    vector<string> heavy_hitters();
+    void update(const string* item, double count);
+    double estimate(const string* item);
+    vector<const string*> heavy_hitters();
 
     inline size_t space_size() {
         return width * depth + k;
@@ -35,21 +35,21 @@ struct CountSketch {
         std::mt19937 gen(rd());
 
         for(int i = 0; i < depth; i++) {
-            hashes[i] = generate_hash_function(gen, items, width);
-            signs[i] = generate_sign_function(gen, items);
+            hashes[i] = generate_hash_function(gen, ds.items, width);
+            signs[i] = generate_sign_function(gen, ds.items);
         }
     }
 
     int width, depth, k;
     vector<vector<double>> sketch;
-    Heap<tuple<double, string>> top_k;
+    Heap<tuple<double, const string*>> top_k;
 
     // Pre-allocate array for CountSketch::estimates to avoid many small allocations.
     vector<double> _estimates;
 
     vector<HashFun> hashes;
     vector<SignFun> signs;
-    unordered_set<string>& items;
+    Dataset& ds;
 };
 
 #endif

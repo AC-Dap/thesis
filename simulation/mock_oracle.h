@@ -6,15 +6,17 @@
 #include <unordered_map>
 #include <random>
 
+#include "dataset.h"
+
 using namespace std;
 
 struct MockOracle {
-    MockOracle(double ep, unordered_map<string, size_t>& item_counts): ep(ep), item_counts(item_counts) {
-        estimates.reserve(item_counts.size());
+    MockOracle(double ep, Dataset& ds): ep(ep), ds(ds) {
+        estimates.reserve(ds.item_counts.size());
         reset_estimates();
     }
 
-    inline double estimate(const string& item) { return estimates[item]; }
+    inline double estimate(const string* item) { return estimates[item]; }
 
     inline void reset_estimates() {
         random_device rd;
@@ -22,15 +24,15 @@ struct MockOracle {
 
         uniform_real_distribution<> d(1-ep, 1+ep);
 
-        for(auto& item : item_counts) {
+        for(auto& item : ds.item_counts) {
             estimates[item.first] = d(gen) * item.second;
         }
     }
 
     double ep;
-    unordered_map<string, double> estimates;
+    unordered_map<const string*, double> estimates;
 
-    unordered_map<string, size_t>& item_counts;
+    Dataset& ds;
 };
 
 #endif

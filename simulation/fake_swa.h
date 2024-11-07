@@ -16,8 +16,7 @@ using namespace std;
  *
  * We pass `items` by value, since we will modify it.
  */
-tuple<vector<string>, vector<double>, vector<double>> fake_swa_sample(
-    size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle,
-    unordered_set<string>& items, unordered_map<string, size_t>& item_counts);
+tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
+    size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds);
 
 #endif
