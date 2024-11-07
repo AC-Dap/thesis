@@ -30,17 +30,17 @@ int main() {
         return -1;
     }
 
-    const size_t deg = 3, nsims = 10;
+    const size_t deg = 3, nsims = 15;
     vector<size_t> ks = {1<<8, 1<<10, 1<<12};
-//    vector<tuple<size_t, size_t, size_t>> swa_ks = {{0, 1<<8, 0}, {0, 1<<10, 0}, {0, 1<<12, 0},
-//                                                     {0, 1<<7, 1<<7}, {0, 1<<9, 1<<9}, {0, 1<<11, 1<<11}};
-    vector<tuple<size_t, size_t, size_t>> swa_ks = {{10, 1<<8, 0}, {10, 1<<10, 0}, {10, 1<<12, 0},
+    vector<tuple<size_t, size_t, size_t>> swa_ks = {{0, 1<<8, 0}, {0, 1<<10, 0}, {0, 1<<12, 0},
+                                                     {0, 1<<7, 1<<7}, {0, 1<<9, 1<<9}, {0, 1<<11, 1<<11},
+                                                     {10, 1<<8, 0}, {10, 1<<10, 0}, {10, 1<<12, 0},
                                                      {10, 1<<7, 1<<7}, {10, 1<<9, 1<<9}, {10, 1<<11, 1<<11}};
     const double ep = 0.05;
 
-//    for(auto k : ks) {
-//        ppswor_sim(k, deg, nsims, ds);
-//    }
+    for(auto k : ks) {
+        ppswor_sim(k, deg, nsims, ds);
+    }
 
     for(auto k : swa_ks) {
         swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, deg, nsims, ds);

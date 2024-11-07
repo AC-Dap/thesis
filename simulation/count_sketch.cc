@@ -20,6 +20,9 @@ void CountSketch::reset() {
 }
 
 void CountSketch::update(const string* item, double count) {
+    // Used later to guess if item is already in top_k or not
+    int old_est = estimate(item);
+
     // Update sketch counts
     for(int i = 0; i < depth; i++) {
         int j = hashes[i][item];
@@ -31,11 +34,13 @@ void CountSketch::update(const string* item, double count) {
     int new_est = estimate(item);
 
     // Check if item is already in top_k
-    for(int i = 0; i < top_k.len; i++) {
-        if(get<1>(top_k.heap[i]) == item) {
-            get<0>(top_k.heap[i]) = new_est;
-            top_k.heapify(i);
-            return;
+    if(old_est >= get<0>(top_k.heap[0])) {
+        for(int i = 0; i < top_k.len; i++) {
+            if(get<1>(top_k.heap[i]) == item) {
+                get<0>(top_k.heap[i]) = new_est;
+                top_k.heapify(i);
+                return;
+            }
         }
     }
 
