@@ -6,12 +6,12 @@
 #include <unordered_map>
 #include <iostream>
 #include <fstream>
-
+#include <algorithm>
 #include <chrono>
 
 using namespace std;
 
-bool read_dataset(const char* path, Dataset& ds) {
+bool Dataset::read_from_file(const char* path) {
     ifstream f(path);
 
     if(!f.is_open()) {
@@ -21,16 +21,16 @@ bool read_dataset(const char* path, Dataset& ds) {
 
     auto t1 = chrono::high_resolution_clock::now();
 
-    vector<string> lines;
+    vector<string> f_lines;
     string line;
     // Skip header
     getline(f, line);
     while(getline(f, line)) {
-        size_t query_start = line.find('\t');
-        size_t query_end = line.find('\t', query_start + 1);
+        size_t query_start = line.find('\t') + 1;
+        size_t query_end = line.find('\t', query_start);
         string s = line.substr(query_start, query_end - query_start);
 
-        lines.push_back(s);
+        f_lines.push_back(s);
     }
     f.close();
 
@@ -41,24 +41,44 @@ bool read_dataset(const char* path, Dataset& ds) {
 
     // At this point, lines should be stable.
     // Now we want to work with const string* pointers, so we need
-    // to get a pointer to one instance of every unique string.
-    unordered_map<string, const string*> string_to_ptr;
-    for(auto& line : lines) {
-        string_to_ptr[line] = &line;
+    // to collect all unique strings
+    for(auto& line : f_lines) {
+        _backing_items.insert(line);
     }
 
-    ds.lines.resize(lines.size());
-    ds.items.reserve(string_to_ptr.size());
-    ds.item_counts.reserve(string_to_ptr.size());
+    lines.resize(f_lines.size());
+    items.reserve(_backing_items.size());
+    item_counts.reserve(_backing_items.size());
 
-    for(auto& item : string_to_ptr) {
-        ds.items.insert(item.second);
+    for(auto& item : _backing_items) {
+        items.insert(&item);
     }
 
-    for(int i = 0; i < lines.size(); i++) {
-        ds.lines[i] = string_to_ptr[lines[i]];
-        ds.item_counts[ds.lines[i]]++;
+    for(int i = 0; i < f_lines.size(); i++) {
+        lines[i] = &*_backing_items.find(f_lines[i]);
+        item_counts[lines[i]]++;
     }
 
     return true;
+}
+
+
+void Dataset::print_top_k(size_t k) {
+    // create container for top 10
+    vector<pair<const string*, int>> sorted(k);
+
+    // sort and copy with reversed compare function using second value of std::pair
+    partial_sort_copy(item_counts.begin(), item_counts.end(),
+                      sorted.begin(), sorted.end(),
+                      [](const pair<const string*, int> &a, const pair<const string*, int> &b)
+    {
+        return !(a.second < b.second);
+    });
+
+    cout << endl << "top 10" << endl;
+
+    for(auto p : sorted)
+    {
+        cout << *p.first << "  " << p.second << endl;
+    }
 }

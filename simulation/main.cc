@@ -26,7 +26,7 @@ void swa_sim(size_t kh, size_t kp, size_t ku, double ep, size_t deg, size_t nsim
 
 int main() {
     Dataset ds;
-    if(!read_dataset(DATA_PATH, ds)) {
+    if(!ds.read_from_file(DATA_PATH)) {
         return -1;
     }
 
