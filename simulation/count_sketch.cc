@@ -11,7 +11,7 @@
 using namespace std;
 
 void CountSketch::reset() {
-    for(auto row : sketch) {
+    for(auto& row : sketch) {
         std::fill(row.begin(), row.end(), 0);
     }
     top_k.len = 0;
@@ -34,7 +34,7 @@ void CountSketch::update(const string* item, double count) {
     int new_est = estimate(item);
 
     // Check if item is already in top_k
-    if(old_est >= get<0>(top_k.heap[0])) {
+    if(top_k.len > 0 && old_est >= get<0>(top_k.heap[0])) {
         for(int i = 0; i < top_k.len; i++) {
             if(get<1>(top_k.heap[i]) == item) {
                 get<0>(top_k.heap[i]) = new_est;

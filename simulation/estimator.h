@@ -4,23 +4,45 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <cmath>
 
 #include "dataset.h"
 
 using namespace std;
 
-inline size_t exact_moment(DatasetItemCounts& item_counts, size_t deg) {
-    size_t sum = 0;
+inline __int128 exact_moment(DatasetItemCounts& item_counts, size_t deg) {
+    __int128 sum = 0;
     for(auto& item : item_counts) {
-        sum += pow(item.second, deg);
+        // Manual integer power instead of floating-point pow()
+        __int128 value = 1;
+        for(size_t i = 0; i < deg; i++) {
+            value *= item.second;
+        }
+        sum += value;
     }
     return sum;
 }
 
-inline double estimate_moment(vector<double>& weights, vector<double>& probs, size_t deg) {
-    double sum = 0;
+inline long double estimate_moment(vector<double>& weights, vector<double>& probs, size_t deg) {
+    // Use Kahan summation to avoid floating point errors
+    long double sum = 0;
+    long double c = 0.0;
     for(int i = 0; i < weights.size(); i++) {
-        sum += pow(weights[i], deg) / probs[i];
+        // Repeated squaring to avoid extra multiplications
+        long double value = 1;
+        long double exp = weights[i];
+        for(int d = deg; d > 0; d = d >> 1) {
+            if((d & 1) == 1) value *= exp;
+            exp *= exp;
+        }
+
+        // Kahan summation algorithm
+        long double term = value / probs[i];
+        double y = term - c;       // c is the running compensation
+        double t = sum + y;        // sum is big, y is small
+        c = (t - sum) - y;        // (t - sum) cancels high-order bits of y
+                                  // subtracting y recovers negative of low-order bits
+        sum = t;                  // new sum
     }
 
     return sum;

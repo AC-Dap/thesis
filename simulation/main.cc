@@ -4,6 +4,7 @@
 #include <string>
 
 #include "dataset.h"
+#include "estimator.h"
 #include "simulations.h"
 
 using namespace std;
@@ -30,19 +31,28 @@ int main() {
         return -1;
     }
 
-    const size_t deg = 3, nsims = 15;
-    vector<size_t> ks = {1<<8, 1<<10, 1<<12};
-    vector<tuple<size_t, size_t, size_t>> swa_ks = {{0, 1<<8, 0}, {0, 1<<10, 0}, {0, 1<<12, 0},
-                                                     {0, 1<<7, 1<<7}, {0, 1<<9, 1<<9}, {0, 1<<11, 1<<11},
-                                                     {10, 1<<8, 0}, {10, 1<<10, 0}, {10, 1<<12, 0},
-                                                     {10, 1<<7, 1<<7}, {10, 1<<9, 1<<9}, {10, 1<<11, 1<<11}};
+    const size_t deg = 4, nsims = 20;
+    vector<size_t> ks = {1<<8, 1<<10, 1<<12, 1<<14, 1<<16};
+    vector<tuple<size_t, size_t, size_t>> swa_ks;
+    for(auto k : ks) {
+        swa_ks.push_back({0, k, 0});
+        swa_ks.push_back({50, k, 0});
+        swa_ks.push_back({0, k/2, k/2});
+        swa_ks.push_back({50, k/2, k/2});
+    }
+
     const double ep = 0.05;
 
+    cout << "Exact moment: " << format("{}", exact_moment(ds.item_counts, deg)) << endl;
+
     for(auto k : ks) {
-        ppswor_sim(k, deg, nsims, ds);
+        ppswor_sim(k, 3, nsims, ds);
+    }
+    for(auto k : ks) {
+        ppswor_sim(k, 4, nsims, ds);
     }
 
-    for(auto k : swa_ks) {
-        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, deg, nsims, ds);
-    }
+//    for(auto k : swa_ks) {
+//        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, deg, nsims, ds);
+//    }
 }

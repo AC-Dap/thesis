@@ -19,7 +19,7 @@ using namespace std;
 vector<double> run_n_ppswor_sims(size_t k, size_t deg, size_t nsims, Dataset& ds){
     auto t1 = chrono::high_resolution_clock::now();
 
-    PPSWOR pp(k, deg, ds);
+    PPSWOR pp(k, 2, ds);
 
     auto t2 = chrono::high_resolution_clock::now();
     cout << "Initializing PPSWOR sketch took "

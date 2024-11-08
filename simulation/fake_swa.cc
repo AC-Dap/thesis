@@ -6,6 +6,7 @@
 #include <tuple>
 #include <random>
 #include <functional>
+#include <cmath>
 
 #include <iostream>
 
@@ -64,14 +65,14 @@ tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
 
     // Get top kp by weighted sample in remaining items
     Heap<tuple<double, const string*>> top_p(kp + 1);
-    get_top_items(top_p, item_copy, [&](const string* item) { return pow(oracle.estimate(item), deg) / seed[item]; });
+    get_top_items(top_p, item_copy, [&](const string* item) { return oracle.estimate(item) / pow(seed[item], 1./deg); });
 
     auto tau = get<0>(top_p.heap[0]);
     for(int i = 0; i < kp; i++) {
         auto item = get<1>(top_p.heap[1+i]);
         s[kh + i] = item;
         weights[kh + i] = ds.item_counts[item];
-        probs[kh + i] = 1 - exp(-pow(oracle.estimate(item), deg) / tau);
+        probs[kh + i] = 1 - exp(-pow(oracle.estimate(item) / tau, deg));
         item_copy.erase(item);
     }
 
