@@ -31,28 +31,29 @@ int main() {
         return -1;
     }
 
-    const size_t deg = 4, nsims = 20;
+    const size_t deg = 4, nsims = 30;
     vector<size_t> ks = {1<<8, 1<<10, 1<<12, 1<<14, 1<<16};
     vector<tuple<size_t, size_t, size_t>> swa_ks;
     for(auto k : ks) {
         swa_ks.push_back({0, k, 0});
-        swa_ks.push_back({50, k, 0});
+        swa_ks.push_back({100, k, 0});
         swa_ks.push_back({0, k/2, k/2});
-        swa_ks.push_back({50, k/2, k/2});
+        swa_ks.push_back({100, k/2, k/2});
     }
 
     const double ep = 0.05;
 
     cout << "Exact moment: " << format("{}", exact_moment(ds.item_counts, deg)) << endl;
 
-    for(auto k : ks) {
-        ppswor_sim(k, 3, nsims, ds);
-    }
-    for(auto k : ks) {
-        ppswor_sim(k, 4, nsims, ds);
-    }
-
-//    for(auto k : swa_ks) {
-//        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, deg, nsims, ds);
+//    for(auto k : ks) {
+//        ppswor_sim(k, 3, nsims, ds);
+//        ppswor_sim(k, 4, nsims, ds);
 //    }
+
+    for(auto k : swa_ks) {
+        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
+        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
+        swa_sim(get<0>(k), get<1>(k), get<2>(k), 0.2, 3, nsims, ds);
+        swa_sim(get<0>(k), get<1>(k), get<2>(k), 0.2, 4, nsims, ds);
+    }
 }
