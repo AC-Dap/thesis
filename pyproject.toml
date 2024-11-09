@@ -1,1 +1,1 @@
-[tool.jupytext]formats = "ipynb,py:percent"
+[tool.jupytext]formats = "ipynb,py:percent"

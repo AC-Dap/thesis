@@ -32,12 +32,12 @@ sns.set()
 ### Load data
 _df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
 _df['Query'] = _df['Query'].fillna("")
-df = _df[_df['Query'] != '-'].sample(100000)
+df = _df
 df.head()
 
 # %%
 unique_counts = df['Query'].value_counts()
-unique_counts
+unique_counts[:50]
 
 # %%
 plt.plot(np.arange(len(unique_counts)), unique_counts)
@@ -271,7 +271,7 @@ class SampleWithAdvice:
 
 # %%
 ### Experiments
-deg = 3
+deg = 4
 
 actual_value = np.sum(unique_counts**deg)
 print(f"Actual {deg} Moment:", actual_value)
@@ -305,7 +305,7 @@ def get_ppswor_simulation_results(sketch_size, deg, n_sims=10):
     
     return estimates, space_size
 
-estimates, space_size = get_ppswor_simulation_results(10, deg)
+estimates, space_size = get_ppswor_simulation_results(2**10, deg)
 print("PPSWOR Mean:", np.mean(estimates))
 print("PPSWOR MSE:", np.sqrt(np.mean((estimates - actual_value)**2)))
 print("PPSWOR Size:", space_size)
@@ -455,4 +455,114 @@ fig.supylabel('3rd Moment Estimate Error')
 fig.suptitle('3rd Moment Estimation Error vs. Oracle Error Bound')
 
 plt.savefig('figs/freq_sketch_sim_3rd_moment_ep')
+plt.show()
+
+# %%
+sim_folder = "simulation/results"
+
+nsims = 20
+def read_sim_data(path):
+    with open(f"{sim_folder}/{path}", 'r') as f:
+        lines = [line.rstrip() for line in f]
+        return [float(lines[i]) for i in range(nsims)]
+
+deg = 4
+ep = 0.05
+sample_sizes = [256, 1024, 4096, 16384, 65536]
+
+actual_value = float(sum([val**deg for val in unique_counts]))
+print(actual_value)
+
+ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
+swa_1_results = [read_sim_data(f"swa_k=0-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_3_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+
+
+def plot_curve(ax, results, space, label, color):
+    results = np.array(results)
+    error = (results - actual_value) / actual_value
+    mean = np.mean(error, axis=1)
+    # mse = np.mean((results - actual_value)**2, axis=1)
+    lower = np.min(error, axis=1)
+    upper = np.max(error, axis=1)
+    
+    ax.plot(space, np.abs(mean), label=label, color=color)
+    ax.fill_between(space, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
+    ax.legend()
+
+fig, ax = plt.subplots(1, 5, sharey=True, figsize=(12, 5))
+
+plot_curve(ax[0], ppswor_results, sample_sizes, "PPSWOR", 'b')
+
+plot_curve(ax[1], swa_1_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
+plot_curve(ax[2], swa_2_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = k_p$", 'r')
+plot_curve(ax[3], swa_3_results, sample_sizes, "SWA: $k_h = 100$,\n$k_u = 0$", 'g')
+plot_curve(ax[4], swa_4_results, sample_sizes, "SWA: $k_h = 100$,\n$k_u = k_p$", 'y')
+
+# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+
+ax[0].set_yscale('log')
+ax[1].set_yscale('log')
+
+fig.supxlabel('Sample size')
+fig.supylabel('4th Moment Absolute Estimation Error')
+fig.suptitle('4th Moment Estimation Error vs. Sample Size')
+
+plt.savefig('figs/freq_sketch_sim_4th_moment_large_sample')
+plt.show()
+
+# %%
+sim_folder = "simulation/results"
+
+nsims = 20
+def read_sim_data(path):
+    with open(f"{sim_folder}/{path}", 'r') as f:
+        lines = [line.rstrip() for line in f]
+        return [float(lines[i]) for i in range(nsims)]
+
+deg = 4
+ep = 0.05
+sample_sizes = [256, 1024, 4096, 16384, 65536]
+
+actual_value = float(sum([val**deg for val in unique_counts]))
+print(actual_value)
+
+swa_rel_1_results = [read_sim_data(f"swa_k=0-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_rel_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_abs_1_results = [read_sim_data(f"swa_k=0-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_abs_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+
+
+def plot_curve(ax, results, space, label, color):
+    results = np.array(results)
+    error = (results - actual_value) / actual_value
+    mean = np.mean(error, axis=1)
+    # mse = np.mean((results - actual_value)**2, axis=1)
+    lower = np.min(error, axis=1)
+    upper = np.max(error, axis=1)
+    
+    ax.plot(space, np.abs(mean), label=label, color=color)
+    ax.fill_between(space, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
+    ax.legend()
+
+fig, ax = plt.subplots(2, 2, sharey=True, figsize=(12, 5))
+
+plot_curve(ax[0][0], swa_rel_1_results, sample_sizes, "SWA Rel: $k_h = 0$,\n$k_u = 0$", 'b')
+plot_curve(ax[0][1], swa_rel_2_results, sample_sizes, "SWA Rel: $k_h = 0$,\n$k_u = k_p$", 'r')
+plot_curve(ax[1][0], swa_abs_1_results, sample_sizes, "SWA Abs: $k_h = 0$,\n$k_u = 0$", 'g')
+plot_curve(ax[1][1], swa_abs_2_results, sample_sizes, "SWA Abs: $k_h = 0$,\n$k_u = k_p$", 'y')
+
+# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+
+ax[0][0].set_yscale('log')
+
+fig.supxlabel('Sample size')
+fig.supylabel('4th Moment Absolute Estimation Error')
+fig.suptitle('4th Moment Estimation Error vs. Sample Size')
+
+plt.savefig('figs/freq_sketch_sim_4th_moment_error_type')
 plt.show()
