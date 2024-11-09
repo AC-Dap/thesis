@@ -466,7 +466,7 @@ def read_sim_data(path):
         lines = [line.rstrip() for line in f]
         return [float(lines[i]) for i in range(nsims)]
 
-deg = 4
+deg = 3
 ep = 0.05
 sample_sizes = [256, 1024, 4096, 16384, 65536]
 
@@ -474,10 +474,10 @@ actual_value = float(sum([val**deg for val in unique_counts]))
 print(actual_value)
 
 ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
-swa_1_results = [read_sim_data(f"swa_k=0-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_3_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_1_results = [read_sim_data(f"swa_k=0-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_3_results = [read_sim_data(f"swa_k=100-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
 
 
 def plot_curve(ax, results, space, label, color):
@@ -508,10 +508,10 @@ ax[0].set_yscale('log')
 ax[1].set_yscale('log')
 
 fig.supxlabel('Sample size')
-fig.supylabel('4th Moment Absolute Estimation Error')
-fig.suptitle('4th Moment Estimation Error vs. Sample Size')
+fig.supylabel('3rd Moment Absolute Estimation Error')
+fig.suptitle(f'3rd Moment Estimation Error vs. Sample Size, using {ep} relative error')
 
-plt.savefig('figs/freq_sketch_sim_4th_moment_large_sample')
+plt.savefig('figs/freq_sketch_sim_3rd_moment_rel_err_large_sample')
 plt.show()
 
 # %%
@@ -523,17 +523,17 @@ def read_sim_data(path):
         lines = [line.rstrip() for line in f]
         return [float(lines[i]) for i in range(nsims)]
 
-deg = 4
+deg = 3
 ep = 0.05
 sample_sizes = [256, 1024, 4096, 16384, 65536]
 
 actual_value = float(sum([val**deg for val in unique_counts]))
 print(actual_value)
 
-swa_rel_1_results = [read_sim_data(f"swa_k=0-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_rel_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_abs_1_results = [read_sim_data(f"swa_k=0-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_abs_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_rel_1_results = [read_sim_data(f"swa_k=100-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_rel_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_abs_1_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+swa_abs_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
 
 
 def plot_curve(ax, results, space, label, color):
@@ -564,5 +564,5 @@ fig.supxlabel('Sample size')
 fig.supylabel('4th Moment Absolute Estimation Error')
 fig.suptitle('4th Moment Estimation Error vs. Sample Size')
 
-plt.savefig('figs/freq_sketch_sim_4th_moment_error_type')
+# plt.savefig('figs/freq_sketch_sim_4th_moment_error_type')
 plt.show()
