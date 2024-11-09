@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <chrono>
 #include <iostream>
+#include <concepts>
 
 #include "ppswor.h"
 #include "estimator.h"
@@ -51,10 +52,12 @@ vector<double> run_n_ppswor_sims(size_t k, size_t deg, size_t nsims, Dataset& ds
     return estimates;
 }
 
+template <class T>
+requires IsMockOracle<T>
 vector<double> run_n_swa_sims(size_t kh, size_t kp, size_t ku, size_t oracle_ep, size_t deg, size_t nsims, Dataset& ds){
     auto t1 = chrono::high_resolution_clock::now();
 
-    MockOracle o(oracle_ep, ds);
+    T o(oracle_ep, ds);
 
     auto t2 = chrono::high_resolution_clock::now();
     cout << "Initializing oracle took "
@@ -63,7 +66,7 @@ vector<double> run_n_swa_sims(size_t kh, size_t kp, size_t ku, size_t oracle_ep,
 
     vector<double> estimates(nsims);
     for(int i = 0; i < nsims; i++) {
-        if(i != 0) o.reset_estimates();
+        o.reset_estimates();
 
         auto sample = fake_swa_sample(kh, kp, ku, deg, o, ds);
         auto weights = get<1>(sample), probs = get<2>(sample);

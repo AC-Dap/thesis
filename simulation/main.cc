@@ -2,6 +2,7 @@
 #include <iostream>
 #include <format>
 #include <string>
+#include <concepts>
 
 #include "dataset.h"
 #include "estimator.h"
@@ -18,9 +19,11 @@ void ppswor_sim(size_t k, size_t deg, size_t nsims, Dataset& ds) {
     ppswor_out.close();
 }
 
+template <class T>
+requires IsMockOracle<T>
 void swa_sim(size_t kh, size_t kp, size_t ku, double ep, size_t deg, size_t nsims, Dataset& ds) {
-    auto swa_estimates = run_n_swa_sims(kh, kp, ku, ep, deg, nsims, ds);
-    ofstream swa_out(format("results/swa_k={}-{}-{}_ep={}_deg={}.txt", kh, kp, ku, ep, deg), ofstream::app);
+    auto swa_estimates = run_n_swa_sims<T>(kh, kp, ku, ep, deg, nsims, ds);
+    ofstream swa_out(format("results/swa_k={}-{}-{}_abs_ep={}_deg={}.txt", kh, kp, ku, ep, deg), ofstream::app);
     for(auto estimate : swa_estimates) swa_out << format("{}", estimate) << endl;
     swa_out.close();
 }
@@ -51,9 +54,7 @@ int main() {
 //    }
 
     for(auto k : swa_ks) {
-        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
-        swa_sim(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
-        swa_sim(get<0>(k), get<1>(k), get<2>(k), 0.2, 3, nsims, ds);
-        swa_sim(get<0>(k), get<1>(k), get<2>(k), 0.2, 4, nsims, ds);
+        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
+        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
     }
 }
