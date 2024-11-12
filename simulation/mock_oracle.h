@@ -59,6 +59,16 @@ struct MockOracleAbsoluteError : MockOracle {
     }
 };
 
+struct ExactOracle : MockOracle {
+    ExactOracle(double ep, Dataset& ds): MockOracle(ep, ds){}
+
+    void reset_estimates() override {
+        for(auto& item : ds.item_counts) {
+            estimates[item.first] = item.second;
+        }
+    }
+};
+
 template <class T>
 concept IsMockOracle = std::is_base_of<MockOracle, T>::value;
 

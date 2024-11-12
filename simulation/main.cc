@@ -28,6 +28,13 @@ void swa_sim(size_t kh, size_t kp, size_t ku, double ep, size_t deg, size_t nsim
     swa_out.close();
 }
 
+void exact_sim(size_t kp, size_t deg, size_t nsims, Dataset& ds) {
+    auto swa_estimates = run_n_swa_sims<ExactOracle>(0, kp, 0, 0, deg, nsims, ds);
+    ofstream swa_out(format("results/exact_k={}_deg={}.txt", kp, deg), ofstream::app);
+    for(auto estimate : swa_estimates) swa_out << format("{}", estimate) << endl;
+    swa_out.close();
+}
+
 int main() {
     Dataset ds;
     if(!ds.read_from_file(DATA_PATH)) {
@@ -48,15 +55,20 @@ int main() {
 
     cout << "Exact moment: " << format("{}", exact_moment(ds.item_counts, deg)) << endl;
 
-    for(auto k : ks) {
-        ppswor_sim(k, 3, nsims, ds);
-        ppswor_sim(k, 4, nsims, ds);
-    }
+//    for(auto k : ks) {
+//        ppswor_sim(k, 3, nsims, ds);
+//        ppswor_sim(k, 4, nsims, ds);
+//    }
+//
+//    for(auto k : swa_ks) {
+//        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
+//        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
+//        swa_sim<MockOracleRelativeError>(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
+//        swa_sim<MockOracleRelativeError>(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
+//    }
 
-    for(auto k : swa_ks) {
-        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
-        swa_sim<MockOracleAbsoluteError>(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
-        swa_sim<MockOracleRelativeError>(get<0>(k), get<1>(k), get<2>(k), ep, 3, nsims, ds);
-        swa_sim<MockOracleRelativeError>(get<0>(k), get<1>(k), get<2>(k), ep, 4, nsims, ds);
-    }
+//    for(auto k : ks) {
+//        exact_sim(k, 3, nsims, ds);
+//        exact_sim(k, 4, nsims, ds);
+//    }
 }
