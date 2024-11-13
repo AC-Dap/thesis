@@ -12,7 +12,7 @@ using namespace std;
 
 void CountSketch::reset() {
     for(auto& row : sketch) {
-        std::fill(row.begin(), row.end(), 0);
+        ranges::fill(row, 0);
     }
     top_k.len = 0;
 
@@ -21,17 +21,17 @@ void CountSketch::reset() {
 
 void CountSketch::update(const string* item, double count) {
     // Used later to guess if item is already in top_k or not
-    int old_est = estimate(item);
+    double old_est = estimate(item);
 
     // Update sketch counts
     for(int i = 0; i < depth; i++) {
-        int j = hashes[i][item];
+        size_t j = hashes[i][item];
         int s = signs[i][item];
         sketch[i][j] += s * count;
     }
 
     // Update top-k heap
-    int new_est = estimate(item);
+    double new_est = estimate(item);
 
     // Check if item is already in top_k
     if(top_k.len > 0 && old_est >= get<0>(top_k.heap[0])) {
@@ -58,14 +58,14 @@ void CountSketch::update(const string* item, double count) {
 double CountSketch::estimate(const string* item) {
     // Get estimates from each row
     for(int i = 0; i < depth; i++) {
-        int j = hashes[i][item];
+        size_t j = hashes[i][item];
         int s = signs[i][item];
         _estimates[i] = s * sketch[i][j];
     }
 
     // Return median
     size_t n = _estimates.size() / 2;
-    nth_element(_estimates.begin(), _estimates.begin()+n, _estimates.end());
+    ranges::nth_element(_estimates, _estimates.begin()+n);
     return _estimates[n];
 }
 

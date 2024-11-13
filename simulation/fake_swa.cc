@@ -17,7 +17,7 @@
 
 using namespace std;
 
-void get_top_items(Heap<tuple<double, const string*>>& h, DatasetItems& items, function<double(const string*)> weight_func) {
+void get_top_items(Heap<tuple<double, const string*>>& h, const DatasetItems& items, const function<double(const string*)>& weight_func) {
     if(h.cap == 0) return;
 
     for(auto item : items) {
@@ -48,6 +48,11 @@ tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
     mt19937 gen(rd());
 
     SeedFun seed = generate_seed_function(gen, item_copy);
+
+    // Clip oracle estimates at 1
+    for(auto& [fst, snd] : oracle.estimates) {
+        oracle.estimates[fst] = max(1., snd);
+    }
 
     // First, get top kh by oracle
     Heap<tuple<double, const string*>> top_h(kh);

@@ -8,12 +8,12 @@ bool try_insert(Heap<tuple<double, const string*, size_t>>& h, tuple<double, con
     if(h.len < h.cap) {
         h.push(item);
         return false;
-    } else {
-        auto overflow = h.pushpop(item);
-        o_item = get<1>(overflow);
-        o_count = get<2>(overflow);
-        return true;
     }
+
+    auto overflow = h.pushpop(item);
+    o_item = get<1>(overflow);
+    o_count = get<2>(overflow);
+    return true;
 }
 
 void SWA::update(const string* item, size_t count) {

@@ -1,6 +1,5 @@
 #include "ppswor.h"
 
-#include <unordered_set>
 #include "count_sketch.h"
 #include "hashing.h"
 

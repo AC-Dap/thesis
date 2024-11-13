@@ -72,13 +72,13 @@ void Dataset::print_top_k(size_t k) {
                       sorted.begin(), sorted.end(),
                       [](const pair<const string*, int> &a, const pair<const string*, int> &b)
     {
-        return !(a.second < b.second);
+        return a.second >= b.second;
     });
 
     cout << endl << "top 10" << endl;
 
-    for(auto p : sorted)
+    for(auto [fst, snd] : sorted)
     {
-        cout << *p.first << "  " << p.second << endl;
+        cout << *fst << "  " << snd << endl;
     }
 }

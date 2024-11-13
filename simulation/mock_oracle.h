@@ -39,6 +39,8 @@ struct MockOracleRelativeError : MockOracle {
             estimates[item.first] = d(gen) * item.second;
         }
     }
+
+    static constexpr const char* prefix = "rel";
 };
 
 struct MockOracleAbsoluteError : MockOracle {
@@ -48,7 +50,7 @@ struct MockOracleAbsoluteError : MockOracle {
         random_device rd;
         mt19937 gen(rd());
 
-        uniform_real_distribution<> d(0, ep);
+        uniform_real_distribution<> d(-ep, ep);
 
         double N = 0;
         for(auto& item : ds.item_counts) N += item.second;
@@ -57,6 +59,28 @@ struct MockOracleAbsoluteError : MockOracle {
             estimates[item.first] = item.second + d(gen) * N;
         }
     }
+
+    static constexpr const char* prefix = "abs";
+};
+
+struct MockOracleBinomialError : MockOracle {
+    MockOracleBinomialError(double ep, Dataset& ds): MockOracle(ep, ds) {}
+
+    void reset_estimates() override {
+        random_device rd;
+        mt19937 gen(rd());
+
+        double N = 0;
+        for(auto& item : ds.item_counts) N += item.second;
+
+        for(auto& item : ds.item_counts) {
+            binomial_distribution<> d(N, item.second/N);
+
+            estimates[item.first] = d(gen);
+        }
+    }
+
+    static constexpr const char* prefix = "bin";
 };
 
 struct ExactOracle : MockOracle {
