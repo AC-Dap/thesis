@@ -37,7 +37,10 @@ df.head()
 
 # %%
 unique_counts = df['Query'].value_counts()
-unique_counts[:50]
+
+# %%
+print(sum(unique_counts))
+print(unique_counts[:50])
 
 # %%
 plt.plot(np.arange(len(unique_counts)), unique_counts)
@@ -460,109 +463,231 @@ plt.show()
 # %%
 sim_folder = "simulation/results"
 
-nsims = 20
+nsims = 30
+sample_sizes = [2**i for i in range(8, 17)]
 def read_sim_data(path):
     with open(f"{sim_folder}/{path}", 'r') as f:
         lines = [line.rstrip() for line in f]
         return [float(lines[i]) for i in range(nsims)]
 
-deg = 3
-ep = 0.05
-sample_sizes = [256, 1024, 4096, 16384, 65536]
+def get_exact_moment(deg):
+    return float(sum([val**deg for val in unique_counts]))
 
-actual_value = float(sum([val**deg for val in unique_counts]))
-print(actual_value)
-
-ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
-swa_1_results = [read_sim_data(f"swa_k=0-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_3_results = [read_sim_data(f"swa_k=100-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-
-
-def plot_curve(ax, results, space, label, color):
-    results = np.array(results)
-    error = (results - actual_value) / actual_value
-    mean = np.mean(error, axis=1)
-    # mse = np.mean((results - actual_value)**2, axis=1)
-    lower = np.min(error, axis=1)
-    upper = np.max(error, axis=1)
-    
-    ax.plot(space, np.abs(mean), label=label, color=color)
-    ax.fill_between(space, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
-    ax.legend()
-
-fig, ax = plt.subplots(1, 5, sharey=True, figsize=(12, 5))
-
-plot_curve(ax[0], ppswor_results, sample_sizes, "PPSWOR", 'b')
-
-plot_curve(ax[1], swa_1_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
-plot_curve(ax[2], swa_2_results, sample_sizes, "SWA: $k_h = 0$,\n$k_u = k_p$", 'r')
-plot_curve(ax[3], swa_3_results, sample_sizes, "SWA: $k_h = 100$,\n$k_u = 0$", 'g')
-plot_curve(ax[4], swa_4_results, sample_sizes, "SWA: $k_h = 100$,\n$k_u = k_p$", 'y')
-
-# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-
-ax[0].set_yscale('log')
-ax[1].set_yscale('log')
-
-fig.supxlabel('Sample size')
-fig.supylabel('3rd Moment Absolute Estimation Error')
-fig.suptitle(f'3rd Moment Estimation Error vs. Sample Size, using {ep} relative error')
-
-plt.savefig('figs/freq_sketch_sim_3rd_moment_rel_err_large_sample')
-plt.show()
 
 # %%
-sim_folder = "simulation/results"
+# Plot absolute estimation error vs. sample size
 
-nsims = 20
-def read_sim_data(path):
-    with open(f"{sim_folder}/{path}", 'r') as f:
-        lines = [line.rstrip() for line in f]
-        return [float(lines[i]) for i in range(nsims)]
-
-deg = 3
-ep = 0.05
-sample_sizes = [256, 1024, 4096, 16384, 65536]
-
-actual_value = float(sum([val**deg for val in unique_counts]))
-print(actual_value)
-
-swa_rel_1_results = [read_sim_data(f"swa_k=100-{k}-0_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_rel_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_abs_1_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-swa_abs_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
-
-
-def plot_curve(ax, results, space, label, color):
+def plot_curve(ax, x, results, true_value, label, color):
     results = np.array(results)
-    error = (results - actual_value) / actual_value
+    error = (results - true_value) / true_value
     mean = np.mean(error, axis=1)
-    # mse = np.mean((results - actual_value)**2, axis=1)
     lower = np.min(error, axis=1)
     upper = np.max(error, axis=1)
     
-    ax.plot(space, np.abs(mean), label=label, color=color)
-    ax.fill_between(space, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
+    ax.plot(x, np.abs(mean), label=label, color=color)
+    ax.fill_between(x, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
     ax.legend()
 
-fig, ax = plt.subplots(2, 2, sharey=True, figsize=(12, 5))
+def plot_error_sample_size(deg, error_type):
+    ep = 0.05
+    
+    true_value = get_exact_moment(deg)
+    print(true_value)
 
-plot_curve(ax[0][0], swa_rel_1_results, sample_sizes, "SWA Rel: $k_h = 0$,\n$k_u = 0$", 'b')
-plot_curve(ax[0][1], swa_rel_2_results, sample_sizes, "SWA Rel: $k_h = 0$,\n$k_u = k_p$", 'r')
-plot_curve(ax[1][0], swa_abs_1_results, sample_sizes, "SWA Abs: $k_h = 0$,\n$k_u = 0$", 'g')
-plot_curve(ax[1][1], swa_abs_2_results, sample_sizes, "SWA Abs: $k_h = 0$,\n$k_u = k_p$", 'y')
+    error_prefix = "rel" if error_type == "relative" else "abs"
+    
+    ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
+    swa_1_results = [read_sim_data(f"swa_k=0-{k}-0_{error_prefix}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_{error_prefix}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_3_results = [read_sim_data(f"swa_k=100-{k}-0_{error_prefix}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_{error_prefix}_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    
+    fig, ax = plt.subplots(1, 5, sharex=True, sharey=True, figsize=(12, 5))
+    
+    plot_curve(ax[0], sample_sizes, ppswor_results, true_value, "PPSWOR", 'b')
+    
+    plot_curve(ax[1], sample_sizes, swa_1_results, true_value, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
+    plot_curve(ax[2], sample_sizes, swa_2_results, true_value, "SWA: $k_h = 0$,\n$k_u = k_p$", 'r')
+    plot_curve(ax[3], sample_sizes, swa_3_results, true_value, "SWA: $k_h = 100$,\n$k_u = 0$", 'g')
+    plot_curve(ax[4], sample_sizes, swa_4_results, true_value, "SWA: $k_h = 100$,\n$k_u = k_p$", 'y')
+    
+    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    
+    ax[0].set_yscale('log')
+    ax[0].set_xscale('log')
+    
+    fig.supxlabel('Sample size')
+    fig.supylabel(f'{deg} Moment Absolute Estimation Error')
+    fig.suptitle(f'{deg} Moment Estimation Error vs. Sample Size, using {ep} {error_type} error')
+    
+    # plt.savefig(f'figs/freq_sketch_sim_{deg}_moment_{error_prefix}_err_large_sample')
+    plt.show()
 
-# ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-# ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+plot_error_sample_size(3, "relative")
+plot_error_sample_size(3, "absolute")
+plot_error_sample_size(4, "relative")
+plot_error_sample_size(4, "absolute")
 
-ax[0][0].set_yscale('log')
 
-fig.supxlabel('Sample size')
-fig.supylabel('4th Moment Absolute Estimation Error')
-fig.suptitle('4th Moment Estimation Error vs. Sample Size')
+# %%
+# Plot estimation error across oracle types
 
-# plt.savefig('figs/freq_sketch_sim_4th_moment_error_type')
-plt.show()
+def plot_curve(ax, x, results, true_value, label, color):
+    results = np.array(results)
+    error = (results - true_value) / true_value
+    mean = np.mean(error, axis=1)
+    lower = np.min(error, axis=1)
+    upper = np.max(error, axis=1)
+    
+    ax.plot(x, np.abs(mean), label=label, color=color)
+    ax.fill_between(x, np.abs(mean), np.maximum(np.abs(lower), np.abs(upper)), color=color, alpha=0.2)
+    ax.legend()
+
+def plot_error_oracle_types(deg):
+    ep = 0.05
+    sample_sizes = [256, 1024, 4096, 16384, 65536]
+    
+    true_value = get_exact_moment(deg)
+    print(true_value)
+    
+    swa_rel_1_results = [read_sim_data(f"swa_k=100-{k}-0_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_abs_1_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_abs_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    
+    fig, ax = plt.subplots(2, 2,  sharex=True, sharey=True, figsize=(12, 5))
+    
+    plot_curve(ax[0][0], sample_sizes, swa_rel_1_results, true_value, "SWA Rel: $k_h = 0$,\n$k_u = 0$", 'b')
+    plot_curve(ax[0][1], sample_sizes, swa_rel_2_results, true_value, "SWA Rel: $k_h = 0$,\n$k_u = k_p$", 'r')
+    plot_curve(ax[1][0], sample_sizes, swa_abs_1_results, true_value, "SWA Abs: $k_h = 0$,\n$k_u = 0$", 'g')
+    plot_curve(ax[1][1], sample_sizes, swa_abs_2_results, true_value, "SWA Abs: $k_h = 0$,\n$k_u = k_p$", 'y')
+
+    ax[0][0].set_xscale('log')
+    ax[0][0].set_yscale('log')
+    
+    fig.supxlabel('Sample size')
+    fig.supylabel(f'{deg} Moment Absolute Estimation Error')
+    fig.suptitle(f'{deg} Moment Estimation Error vs. Sample Size')
+    
+    # plt.savefig(f'figs/freq_sketch_sim_{deg}_moment_error_type')
+    plt.show()
+
+plot_error_oracle_types(3)
+plot_error_oracle_types(4)
+
+
+# %%
+# Plot MSE of simulations across epsilons
+
+def plot_curve(x, results, true_value, label, color):
+    results = np.array(results)
+    mse = np.sqrt(np.mean((results - true_value)**2, axis=1)) / true_value
+    
+    plt.plot(x, mse, label=label, color=color)
+
+def plot_mse_rel(deg):
+    sample_sizes = [256, 1024, 4096, 16384, 65536]
+    
+    true_value = float(sum([val**deg for val in unique_counts]))
+    print(true_value)
+    
+    ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
+    exact_results = [read_sim_data(f"exact_k={k}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(f"swa_k=100-{k}-0_rel_ep=0.05_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_rel_ep=0.05_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_3_results = [read_sim_data(f"swa_k=100-{k}-0_rel_ep={0.2}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_rel_ep={0.2}_deg={deg}.txt") for k in sample_sizes]
+
+    plot_curve(sample_sizes, ppswor_results, true_value, "PPSWOR", 'r')
+    plot_curve(sample_sizes, exact_results, true_value, "Exact", 'g')
+    plot_curve(sample_sizes, swa_rel_1_results, true_value, "SWA ep=0.05: $k_h = 100$,\n$k_u = 0$", 'b')
+    plot_curve(sample_sizes, swa_rel_2_results, true_value, "SWA ep=0.05: $k_h = 100$,\n$k_u = k_p$", 'y')
+    plot_curve(sample_sizes, swa_rel_3_results, true_value, "SWA ep=0.2: $k_h = 100$,\n$k_u = 0$", 'orange')
+    plot_curve(sample_sizes, swa_rel_4_results, true_value, "SWA ep=0.2: $k_h = 100$,\n$k_u = k_p$", 'purple')
+    
+    plt.legend()
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.show()
+
+plot_mse_rel(3)
+plot_mse_rel(4)
+
+
+# %%
+# Plot MSE of simulations across error types
+
+def plot_curve(x, results, true_value, label, color):
+    results = np.array(results)
+    mse = np.sqrt(np.mean((results - true_value)**2, axis=1)) / true_value
+    
+    plt.plot(x, mse, label=label, color=color)
+
+def plot_mse_error(deg):
+    ep = 0.05
+    sample_sizes = [256, 1024, 4096, 16384, 65536]
+    
+    true_value = float(sum([val**deg for val in unique_counts]))
+    print(true_value)
+    
+    ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
+    exact_results = [read_sim_data(f"exact_k={k}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(f"swa_k=100-{k}-0_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_abs_1_results = [read_sim_data(f"swa_k=100-{k}-0_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_abs_2_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_abs_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    
+    plot_curve(sample_sizes, ppswor_results, true_value, "PPSWOR", 'r')
+    plot_curve(sample_sizes, exact_results, true_value, "Exact", 'g')
+    plot_curve(sample_sizes, swa_rel_1_results, true_value, "SWA Rel: $k_h = 100$,\n$k_u = 0$", 'b')
+    plot_curve(sample_sizes, swa_rel_2_results, true_value, "SWA Rel: $k_h = 100$,\n$k_u = k_p$", 'y')
+    plot_curve(sample_sizes, swa_abs_1_results, true_value, "SWA Abs: $k_h = 100$,\n$k_u = 0$", 'black')
+    plot_curve(sample_sizes, swa_abs_2_results, true_value, "SWA Abs: $k_h = 100$,\n$k_u = k_p$", 'cyan')
+    
+    plt.legend()
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.show()
+
+plot_mse_error(3)
+plot_mse_error(4)
+
+
+# %%
+# Plot MSE of simulations across kh
+
+def plot_curve(x, results, true_value, label, color):
+    results = np.array(results)
+    mse = np.sqrt(np.mean((results - true_value)**2, axis=1)) / true_value
+    
+    plt.plot(x, mse, label=label, color=color)
+
+def plot_mse_kh(deg):
+    ep = 0.05
+    sample_sizes = [256, 1024, 4096, 16384, 65536]
+    
+    true_value = float(sum([val**deg for val in unique_counts]))
+    print(true_value)
+    
+    ppswor_results = [read_sim_data(f"ppswor_k={k}_deg={deg}.txt") for k in sample_sizes]
+    exact_results = [read_sim_data(f"exact_k={k}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(f"swa_k=0-{k}-0_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(f"swa_k=0-{k//2}-{k//2}_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_3_results = [read_sim_data(f"swa_k=100-{k}-0_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    swa_rel_4_results = [read_sim_data(f"swa_k=100-{k//2}-{k//2}_rel_ep={ep}_deg={deg}.txt") for k in sample_sizes]
+    
+    plot_curve(sample_sizes, ppswor_results, true_value, "PPSWOR", 'r')
+    plot_curve(sample_sizes, exact_results, true_value, "Exact", 'g')
+    plot_curve(sample_sizes, swa_rel_1_results, true_value, "SWA: $k_h = 0$,\n$k_u = 0$", 'b')
+    plot_curve(sample_sizes, swa_rel_2_results, true_value, "SWA: $k_h = 0$,\n$k_u = k_p$", 'y')
+    plot_curve(sample_sizes, swa_rel_1_results, true_value, "SWA: $k_h = 100$,\n$k_u = 0$", 'black')
+    plot_curve(sample_sizes, swa_rel_2_results, true_value, "SWA: $k_h = 100$,\n$k_u = k_p$", 'cyan')
+    
+    plt.legend()
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.show()
+
+plot_mse_kh(3)
+plot_mse_kh(4)
