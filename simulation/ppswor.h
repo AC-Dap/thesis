@@ -10,23 +10,23 @@ using namespace std;
 struct PPSWOR {
     PPSWOR(size_t k, size_t deg, Dataset& ds):
         // CountSketch: ep = 1/(2k), width = e/ep
-        k(k), deg(deg), cs(int(5.4366*k), 7, k+1, ds), ds(ds) {
+        k(k), deg(deg), cs(size_t(5.4366*k), k+1, ds), ds(ds) {
         reset_seed();
     }
 
     void update(const string* item, double count);
     tuple<vector<const string*>, vector<double>, vector<double>> sample();
 
-    inline size_t space_size() {
+    size_t space_size() {
         return cs.space_size();
     }
 
-    inline void reset() {
+    void reset() {
         cs.reset();
         reset_seed();
     }
 
-    inline void reset_seed() {
+    void reset_seed() {
         std::random_device rd;
         std::mt19937 gen(rd());
 

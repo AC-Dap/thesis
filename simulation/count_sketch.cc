@@ -57,16 +57,17 @@ void CountSketch::update(const string* item, double count) {
 
 double CountSketch::estimate(const string* item) {
     // Get estimates from each row
+    double estimates[depth];
     for(int i = 0; i < depth; i++) {
         size_t j = hashes[i][item];
         int s = signs[i][item];
-        _estimates[i] = s * sketch[i][j];
+        estimates[i] = s * sketch[i][j];
     }
 
     // Return median
-    size_t n = _estimates.size() / 2;
-    ranges::nth_element(_estimates, _estimates.begin()+n);
-    return _estimates[n];
+    size_t n = depth / 2;
+    ranges::nth_element(estimates, estimates + n);
+    return estimates[n];
 }
 
 vector<const string*> CountSketch::heavy_hitters() {
