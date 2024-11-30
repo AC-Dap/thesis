@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
+#include <array>
 
 #include "heap.h"
 #include "hashing.h"
@@ -57,7 +58,7 @@ void CountSketch::update(const string* item, double count) {
 
 double CountSketch::estimate(const string* item) {
     // Get estimates from each row
-    double estimates[depth];
+    array<double, depth> estimates{};
     for(int i = 0; i < depth; i++) {
         size_t j = hashes[i][item];
         int s = signs[i][item];
@@ -66,7 +67,7 @@ double CountSketch::estimate(const string* item) {
 
     // Return median
     size_t n = depth / 2;
-    ranges::nth_element(estimates, estimates + n);
+    ranges::nth_element(estimates, estimates.begin() + n);
     return estimates[n];
 }
 

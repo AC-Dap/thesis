@@ -40,7 +40,7 @@ struct CountSketch {
     }
 
     size_t width, k;
-    constexpr size_t depth = 7;    // Fix depth to 7 for optimization
+    static constexpr size_t depth = 7;    // Fix depth to 7 for optimization
     vector<vector<double>> sketch;
     Heap<tuple<double, const string*>> top_k;
 

@@ -89,7 +89,7 @@ tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
     for(int i = 0; i < ku; i++) {
         s[kh + kp + i] = get<1>(top_u.heap[1+i]);
         weights[kh + kp + i] = ds.item_counts[s[kh + kp + i]];
-        probs[kh + kp + i] = 1 - exp(-tau);
+        probs[kh + kp + i] = 1 - exp(tau);
     }
 
     return {s, weights, probs};

@@ -2,10 +2,8 @@
 #define MOCK_ORACLE_H
 
 #include <string>
-#include <unordered_set>
 #include <unordered_map>
 #include <random>
-#include <concepts>
 
 #include "dataset.h"
 
@@ -16,7 +14,7 @@ struct MockOracle {
         estimates.reserve(ds.item_counts.size());
     }
 
-    inline double estimate(const string* item) { return estimates[item]; }
+    double estimate(const string* item) { return estimates[item]; }
 
     virtual void reset_estimates(){};
 
@@ -33,7 +31,7 @@ struct MockOracleRelativeError : MockOracle {
         random_device rd;
         mt19937 gen(rd());
 
-        uniform_real_distribution<> d(1-ep, 1+ep);
+        uniform_real_distribution<> d(1.-ep, 1.+ep);
 
         for(auto& item : ds.item_counts) {
             estimates[item.first] = d(gen) * item.second;
@@ -52,11 +50,8 @@ struct MockOracleAbsoluteError : MockOracle {
 
         uniform_real_distribution<> d(-ep, ep);
 
-        double N = 0;
-        for(auto& item : ds.item_counts) N += item.second;
-
         for(auto& item : ds.item_counts) {
-            estimates[item.first] = item.second + d(gen) * N;
+            estimates[item.first] = item.second + d(gen) * ds.lines.size();
         }
     }
 
@@ -70,8 +65,7 @@ struct MockOracleBinomialError : MockOracle {
         random_device rd;
         mt19937 gen(rd());
 
-        double N = 0;
-        for(auto& item : ds.item_counts) N += item.second;
+        double N = ds.lines.size();
 
         for(auto& item : ds.item_counts) {
             binomial_distribution<> d(N, item.second/N);
@@ -91,6 +85,8 @@ struct ExactOracle : MockOracle {
             estimates[item.first] = item.second;
         }
     }
+
+    static constexpr const char* prefix = "exact";
 };
 
 template <class T>

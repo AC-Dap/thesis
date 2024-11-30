@@ -1,7 +1,7 @@
 FLAGS := -O3 -std=c++20
 
 OUT_DIR := out
-lib_files := count_sketch.cc dataset.cc fake_swa.cc hashing.cc ppswor.cc swa.cc
+lib_files := count_sketch.cc dataset.cc fake_swa.cc hashing.cc ppswor.cc swa.cc bucket_sketch.cc
 files := $(lib_files) main.cc
 
 .PHONY: all
