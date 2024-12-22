@@ -16,6 +16,10 @@ Buckets generate_linear_buckets(size_t k);
 
 double bucket_sketch(size_t k_hh, size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
+double cond_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+double alt_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
 double n_estimate_left(double S, double left, double right);
 
 double n_estimate_right(double S, double left, double right);

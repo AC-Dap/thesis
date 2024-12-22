@@ -34,13 +34,22 @@ print(df.head())
 print(unique_counts.head(), len(unique_counts))
 print(unique_freqs.head())
 
+# +
+for k in range(16):
+    # plt.axhline(10 ** (-7*k/16), c='r', linestyle='--')
+    plt.axhline(k/2048, c='g', linestyle='--')
+
 plt.plot(np.arange(len(unique_counts)), unique_freqs)
+
+
 plt.xlabel('Rank')
 plt.ylabel('Frequency')
 plt.xscale('log')
 plt.yscale('log')
 plt.title('Rank vs. Frequency of search results')
 
+
+# -
 
 # Generate Buckets
 def generate_buckets(min_freq, k):

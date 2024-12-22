@@ -581,3 +581,56 @@ def plot_bucketing_kh_sketches(deg):
 
 plot_bucketing_kh_sketches(3)
 plot_bucketing_kh_sketches(4)
+
+
+# %%
+def plot_bucketing_kh_sketches(deg):
+    ep = 0.05
+    true_value = float(sum([val**deg for val in unique_counts]))
+
+    fig, ax = plt.subplots(1, 2, sharey=True, sharex=True, figsize=(10, 6))
+
+    c = [('r', 'g'), ('b', 'y'), ('gold', 'pink')]
+    est_type_label = ["Unbiased estimator", "2 Summary estimator", "Harmonic mean estimator"]
+    oracle_type = 'rel'
+    for l, n_est_type in enumerate(["cond", "alt", "harm"]):
+        if n_est_type == "cond":
+            linear_with_hh = [read_sim_data(deg, f"linear_bucket_cond_{oracle_type}", f"k={1}_khh={k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
+            expo_with_hh = [read_sim_data(deg, f"expo_bucket_cond_{oracle_type}", f"k={1}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+            plot_mse(ax[0], sample_sizes, linear_with_hh, true_value, f"{est_type_label[l]}", c[l][1])
+            plot_mse(ax[1], sample_sizes, expo_with_hh, true_value, f"{est_type_label[l]}", c[l][1])
+        else:
+            linear_no_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_{oracle_type}", f"k={k}_khh={0}_ep={ep}_deg={deg}") for k in sample_sizes]
+            linear_with_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_{oracle_type}", f"k={k//2}_khh={k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
+    
+            expo_no_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_{oracle_type}", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+            expo_with_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_{oracle_type}", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+        
+            plot_mse(ax[0], sample_sizes, linear_no_hh, true_value, f"{est_type_label[l]}:\n$B=k, k_h = 0$", c[l][0])
+            plot_mse(ax[0], sample_sizes, linear_with_hh, true_value, f"{est_type_label[l]}:\n$B=\\frac{{k}}{{2}}, k_h = \\frac{{k}}{{2}}$", c[l][1])
+    
+            plot_mse(ax[1], sample_sizes, expo_no_hh, true_value, f"{est_type_label[l]}:\n$B=k, k_h = 0$", c[l][0])
+            plot_mse(ax[1], sample_sizes, expo_with_hh, true_value, f"{est_type_label[l]}:\n$B=\\frac{{k}}{{2}}, k_h = \\frac{{k}}{{2}}$", c[l][1])
+
+
+    ax[0].set_yscale('log')
+    ax[0].set_xscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+
+    ax[0].set_title("Linear buckets")
+    ax[1].set_title("Exponential buckets")
+
+    fig.supxlabel('Space size ($k$)')
+    fig.supylabel(f'Normalized Root Mean Squared Error')
+    fig.suptitle(f'{nth(deg)} Moment NRMSE vs. Space size, Bucketing Sketch with relative error')
+
+    plt.tight_layout()
+    ax[0].get_legend().remove()
+    sns.move_legend(ax[1], "upper left", bbox_to_anchor=(1, 1))
+    plt.savefig(f'figs/bucket_sketch_new_estimators_{nth(deg)}_moment_nrmse_rel_err', bbox_inches='tight')
+    plt.show()
+
+plot_bucketing_kh_sketches(3)
+# plot_bucketing_kh_sketches(4)

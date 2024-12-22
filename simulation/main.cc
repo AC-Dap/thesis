@@ -4,6 +4,7 @@
 #include <string>
 #include <concepts>
 #include <functional>
+#include <filesystem>
 
 #include "dataset.h"
 #include "estimator.h"
@@ -21,6 +22,15 @@ enum FileWriteMode {
 };
 
 void write_to_file(const string& file_name, const function<vector<double>()>& sim_function, FileWriteMode mode) {
+    // Create directories if they don't exist
+    filesystem::path file_path(file_name);
+    filesystem::path directory = file_path.parent_path();
+
+    if (!directory.empty()) {
+        // Create directories with all necessary parent directories
+        create_directories(directory);
+    }
+
     if(mode == SKIP) {
         if(ifstream in(file_name); in.good()) {
             cout << "Skipping " << file_name << endl;
@@ -80,6 +90,46 @@ void linear_bucket_sim(size_t k, size_t k_hh, const function<double(double, doub
     }, mode);
 }
 
+template <class T>
+requires IsMockOracle<T>
+void expo_cond_bucket_sim(double min_freq, size_t k, size_t k_hh, double ep, size_t deg, size_t nsims, Dataset& ds, FileWriteMode mode = SKIP) {
+    string file_name = format("results/deg={}/expo_bucket_cond_{}/expo_bucket_cond_{}_k={}_khh={}_min_freq={}_ep={}_deg={}.txt",
+        deg, T::prefix, T::prefix, k, k_hh, min_freq, ep, deg);
+    write_to_file(file_name, [&] {
+        return run_n_expo_cond_bucket_sims<T>(min_freq, k, k_hh, ep, deg, nsims, ds);
+    }, mode);
+}
+
+template <class T>
+requires IsMockOracle<T>
+void linear_cond_bucket_sim(size_t k, size_t k_hh, double ep, size_t deg, size_t nsims, Dataset& ds, FileWriteMode mode = SKIP) {
+    string file_name = format("results/deg={}/linear_bucket_cond_{}/linear_bucket_cond_{}_k={}_khh={}_ep={}_deg={}.txt",
+        deg, T::prefix, T::prefix, k, k_hh, ep, deg);
+    write_to_file(file_name, [&] {
+        return run_n_linear_cond_bucket_sims<T>(k, k_hh, ep, deg, nsims, ds);
+    }, mode);
+}
+
+template <class T>
+requires IsMockOracle<T>
+void expo_alt_bucket_sim(double min_freq, size_t k, size_t k_hh, double ep, size_t deg, size_t nsims, Dataset& ds, FileWriteMode mode = SKIP) {
+    string file_name = format("results/deg={}/expo_bucket_alt_{}/expo_bucket_alt_{}_k={}_khh={}_min_freq={}_ep={}_deg={}.txt",
+        deg, T::prefix, T::prefix, k, k_hh, min_freq, ep, deg);
+    write_to_file(file_name, [&] {
+        return run_n_expo_alt_bucket_sims<T>(min_freq, k, k_hh, ep, deg, nsims, ds);
+    }, mode);
+}
+
+template <class T>
+requires IsMockOracle<T>
+void linear_alt_bucket_sim(size_t k, size_t k_hh, double ep, size_t deg, size_t nsims, Dataset& ds, FileWriteMode mode = SKIP) {
+    string file_name = format("results/deg={}/linear_bucket_alt_{}/linear_bucket_alt_{}_k={}_khh={}_ep={}_deg={}.txt",
+        deg, T::prefix, T::prefix, k, k_hh, ep, deg);
+    write_to_file(file_name, [&] {
+        return run_n_linear_alt_bucket_sims<T>(k, k_hh, ep, deg, nsims, ds);
+    }, mode);
+}
+
 int main() {
     Dataset ds;
     if(!ds.read_from_file(DATA_PATH)) {
@@ -110,11 +160,11 @@ int main() {
                 swa_sim<MockOracleRelativeError>(k_h, k_p, k_u, ep, deg, nsims, ds, mode);
             }
 
-            // Exponential bucket
+            // Avg bucket estimator
             vector<tuple<size_t, size_t>> bucket_ks = {{k, 0}, {k/2, k/2}};
             vector<tuple<function<double(double, double, double)>, string>> n_estimates = {
                 {n_estimate_left, "lower"},
-                    {n_estimate_right, "upper"},
+                {n_estimate_right, "upper"},
                 {n_estimate_arith_avg, "arith"},
                 {n_estimate_geo_avg, "geo"},
                 {n_estimate_harm_avg, "harm"}
@@ -130,6 +180,35 @@ int main() {
                     linear_bucket_sim<MockOracleBinomialError>(k, k_hh, n_estimate, name, ep, deg, nsims, ds, mode);
                     linear_bucket_sim<MockOracleRelativeError>(k, k_hh, n_estimate, name, ep, deg, nsims, ds, mode);
                     linear_bucket_sim<ExactOracle>(k, k_hh, n_estimate, name, ep, deg, 1, ds, mode);
+                }
+            }
+
+            // Alt bucket estimator
+            for (auto [k, k_hh] : bucket_ks) {
+                expo_alt_bucket_sim<MockOracleAbsoluteError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                expo_alt_bucket_sim<MockOracleBinomialError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                expo_alt_bucket_sim<MockOracleRelativeError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                expo_alt_bucket_sim<ExactOracle>(min_freq, k, k_hh, ep, deg, 1, ds, mode);
+
+                linear_alt_bucket_sim<MockOracleAbsoluteError>(k, k_hh, ep, deg, nsims, ds, mode);
+                linear_alt_bucket_sim<MockOracleBinomialError>(k, k_hh, ep, deg, nsims, ds, mode);
+                linear_alt_bucket_sim<MockOracleRelativeError>(k, k_hh, ep, deg, nsims, ds, mode);
+                linear_alt_bucket_sim<ExactOracle>(k, k_hh, ep, deg, 1, ds, mode);
+            }
+
+            // Cond bucket estimator (only implemented for degree 3)
+            bucket_ks.emplace_back(1, k/2);
+            if (deg == 3) {
+                for (auto [k, k_hh] : bucket_ks) {
+                    expo_cond_bucket_sim<MockOracleAbsoluteError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                    expo_cond_bucket_sim<MockOracleBinomialError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                    expo_cond_bucket_sim<MockOracleRelativeError>(min_freq, k, k_hh, ep, deg, nsims, ds, mode);
+                    expo_cond_bucket_sim<ExactOracle>(min_freq, k, k_hh, ep, deg, 1, ds, mode);
+
+                    linear_cond_bucket_sim<MockOracleAbsoluteError>(k, k_hh, ep, deg, nsims, ds, mode);
+                    linear_cond_bucket_sim<MockOracleBinomialError>(k, k_hh, ep, deg, nsims, ds, mode);
+                    linear_cond_bucket_sim<MockOracleRelativeError>(k, k_hh, ep, deg, nsims, ds, mode);
+                    linear_cond_bucket_sim<ExactOracle>(k, k_hh, ep, deg, 1, ds, mode);
                 }
             }
         }

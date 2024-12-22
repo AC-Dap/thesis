@@ -17,3 +17,7 @@ sim: $(files) | $(OUT_DIR)
 .PHONY: sim_win64
 sim_win64: $(lib_files) | $(OUT_DIR)
 	x86_64-w64-mingw32-g++ $(FLAGS) -static-libgcc -static-libstdc++ -static $(files) -o $(OUT_DIR)/sim_win64.exe
+
+.PHONY: run
+run: sim
+	$(OUT_DIR)/sim
