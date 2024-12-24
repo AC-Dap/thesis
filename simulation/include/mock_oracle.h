@@ -18,6 +18,8 @@ struct MockOracle {
 
     virtual void reset_estimates(){};
 
+    virtual string name() const = 0;
+
     double ep;
     unordered_map<const string*, double> estimates;
 
@@ -38,7 +40,9 @@ struct MockOracleRelativeError : MockOracle {
         }
     }
 
-    static constexpr const char* prefix = "rel";
+    string name() const override {
+        return "rel";
+    }
 };
 
 struct MockOracleAbsoluteError : MockOracle {
@@ -55,7 +59,9 @@ struct MockOracleAbsoluteError : MockOracle {
         }
     }
 
-    static constexpr const char* prefix = "abs";
+    string name() const override {
+        return "abs";
+    }
 };
 
 struct MockOracleBinomialError : MockOracle {
@@ -74,11 +80,13 @@ struct MockOracleBinomialError : MockOracle {
         }
     }
 
-    static constexpr const char* prefix = "bin";
+    string name() const override {
+        return "bin";
+    }
 };
 
 struct ExactOracle : MockOracle {
-    ExactOracle(double ep, Dataset& ds): MockOracle(ep, ds){}
+    ExactOracle(Dataset& ds): MockOracle(0, ds){}
 
     void reset_estimates() override {
         for(auto& item : ds.item_counts) {
@@ -86,7 +94,9 @@ struct ExactOracle : MockOracle {
         }
     }
 
-    static constexpr const char* prefix = "exact";
+    string name() const override {
+        return "exact";
+    }
 };
 
 template <class T>

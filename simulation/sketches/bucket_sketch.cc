@@ -22,12 +22,8 @@ Buckets generate_linear_buckets(size_t k) {
     return buckets;
 }
 
-double bucket_sketch(const size_t k_hh, const size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
-    vector<size_t> bucket_counts(buckets.size() - 1, 0);
+void process_ds_to_buckets(const function<void(double, size_t)> process_item, Heap<tuple<long double, const string*>> top_h, MockOracle& o, const Dataset& ds) {
     size_t N = ds.lines.size();
-
-    // Take out the top k_hh items
-    Heap<tuple<double, const string*>> top_h(k_hh);
 
     // Place each item into the correct bucket
     for (auto& item : ds.item_counts) {
@@ -35,8 +31,8 @@ double bucket_sketch(const size_t k_hh, const size_t deg, const function<double(
         double freq_est = min(1., max(1., o.estimate(item.first)) / N);
         size_t S = item.second;
 
-        // First try and see if this is top_hh
-        if (k_hh > 0) {
+        // First try and see if we want to store anything in top_h
+        if (top_h.cap > 0) {
             if (top_h.len < top_h.cap) {
                 top_h.push({freq_est, item.first});
                 continue;
@@ -49,9 +45,22 @@ double bucket_sketch(const size_t k_hh, const size_t deg, const function<double(
             }
         }
 
+        process_item(freq_est, S);
+    }
+}
+
+double bucket_sketch(const size_t k_hh, const size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
+    vector<size_t> bucket_counts(buckets.size() - 1, 0);
+    size_t N = ds.lines.size();
+
+    // Take out the top k_hh items
+    Heap<tuple<long double, const string*>> top_h(k_hh);
+
+    // Process items
+    process_ds_to_buckets([&](double freq_est, size_t S) {
         size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
         bucket_counts[bucket_i - 1] += S;
-    }
+    }, top_h, o, ds);
 
     // Get prediction of each bucket
     long double estimate = 0;
@@ -83,31 +92,13 @@ double cond_bucket_sketch(const size_t k_hh, const size_t deg, const Buckets& bu
     // Take out the top k_hh items
     Heap<tuple<long double, const string*>> top_h(k_hh);
 
-    // Place each item into the correct bucket
-    for (auto& item : ds.item_counts) {
-        // Constrain estimate between 1/N and 1
-        long double freq_est = min(1., max(1., o.estimate(item.first)) / N);
-        size_t S = item.second;
-
-        // First try and see if this is top_hh
-        if (k_hh > 0) {
-            if (top_h.len < top_h.cap) {
-                top_h.push({freq_est, item.first});
-                continue;
-            }
-
-            if (freq_est > get<0>(top_h.heap[0])) {
-                auto old_item = top_h.pushpop({freq_est, item.first});
-                freq_est = get<0>(old_item);
-                S = ds.item_counts.at(get<1>(old_item));
-            }
-        }
-
+    // Process items
+    process_ds_to_buckets([&](double freq_est, size_t S) {
         size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
         bucket_counts[bucket_i - 1] += S;
         bucket_p[bucket_i - 1] += S * freq_est;
         bucket_p2[bucket_i - 1] += S * freq_est * freq_est;
-    }
+    }, top_h, o, ds);
 
     // Get prediction of each bucket
     long double estimate = 0;
@@ -138,30 +129,12 @@ double alt_bucket_sketch(const size_t k_hh, const size_t deg, const Buckets& buc
     // Take out the top k_hh items
     Heap<tuple<long double, const string*>> top_h(k_hh);
 
-    // Place each item into the correct bucket
-    for (auto& item : ds.item_counts) {
-        // Constrain estimate between 1/N and 1
-        long double freq_est = min(1., max(1., o.estimate(item.first)) / N);
-        size_t S = item.second;
-
-        // First try and see if this is top_hh
-        if (k_hh > 0) {
-            if (top_h.len < top_h.cap) {
-                top_h.push({freq_est, item.first});
-                continue;
-            }
-
-            if (freq_est > get<0>(top_h.heap[0])) {
-                auto old_item = top_h.pushpop({freq_est, item.first});
-                freq_est = get<0>(old_item);
-                S = ds.item_counts.at(get<1>(old_item));
-            }
-        }
-
+    // Process items
+    process_ds_to_buckets([&](double freq_est, size_t S) {
         size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
         bucket_counts[bucket_i - 1] += S;
         bucket_p[bucket_i - 1] += S / freq_est;
-    }
+    }, top_h, o, ds);
 
     // Get prediction of each bucket
     long double estimate = 0;

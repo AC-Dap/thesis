@@ -12,7 +12,7 @@
 using namespace std;
 
 struct SWA {
-    SWA(size_t kh, size_t kp, size_t ku, size_t deg, MockOracle oracle, Dataset& ds):
+    SWA(size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds):
         kh(kh), kp(kp + 1), ku(ku + 1), deg(deg), oracle(oracle), ds(ds),
         h_heap(kh), p_heap(kp), u_heap(ku) {
 
@@ -41,7 +41,7 @@ struct SWA {
     size_t kh, kp, ku, deg;
     Heap<tuple<double, const string*, size_t>> h_heap, p_heap, u_heap;
 
-    MockOracle oracle;
+    MockOracle& oracle;
     SeedFun seed;
     Dataset& ds;
 };

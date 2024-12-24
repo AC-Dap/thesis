@@ -14,7 +14,8 @@ typedef vector<double> Buckets;
 Buckets generate_exponential_buckets(double min_freq, size_t k);
 Buckets generate_linear_buckets(size_t k);
 
-double bucket_sketch(size_t k_hh, size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+double bucket_sketch(size_t k_hh, size_t deg,
+                     const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
 double cond_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
