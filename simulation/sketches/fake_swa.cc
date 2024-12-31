@@ -49,11 +49,6 @@ tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
 
     SeedFun seed = generate_seed_function(gen, item_copy);
 
-    // Clip oracle estimates at 1
-    for(auto& [fst, snd] : oracle.estimates) {
-        oracle.estimates[fst] = max(1., snd);
-    }
-
     // First, get top kh by oracle
     Heap<tuple<double, const string*>> top_h(kh);
     get_top_items(top_h, item_copy, [&](const string* item) { return oracle.estimate(item); });

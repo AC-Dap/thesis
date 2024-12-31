@@ -11,12 +11,11 @@
 
 using namespace std;
 
-bool Dataset::read_from_file(const char* path) {
+void Dataset::read_from_file(const char* path) {
     ifstream f(path);
 
     if(!f.is_open()) {
-        cerr << "Unable to open file" << endl;
-        return false;
+        throw std::invalid_argument("Unable to open file");
     }
 
     auto t1 = chrono::high_resolution_clock::now();
@@ -30,7 +29,14 @@ bool Dataset::read_from_file(const char* path) {
         size_t query_end = line.find('\t', query_start);
         string s = line.substr(query_start, query_end - query_start);
 
-        f_lines.push_back(s);
+        auto query_ptr = backing_items_.find(s);
+        if (query_ptr == backing_items_.end()) {
+            throw std::invalid_argument("Entry \"" + s + "\" not found in backing items");
+        }
+
+        lines.push_back(&*query_ptr);
+        items.insert(&*query_ptr);
+        item_counts[&*query_ptr]++;
     }
     f.close();
 
@@ -38,28 +44,6 @@ bool Dataset::read_from_file(const char* path) {
     cout << "Reading in file took "
          << chrono::duration_cast<chrono::milliseconds>(t2-t1).count() / 1000.0
          << " seconds" << endl;
-
-    // At this point, lines should be stable.
-    // Now we want to work with const string* pointers, so we need
-    // to collect all unique strings
-    for(auto& line : f_lines) {
-        _backing_items.insert(line);
-    }
-
-    lines.resize(f_lines.size());
-    items.reserve(_backing_items.size());
-    item_counts.reserve(_backing_items.size());
-
-    for(auto& item : _backing_items) {
-        items.insert(&item);
-    }
-
-    for(int i = 0; i < f_lines.size(); i++) {
-        lines[i] = &*_backing_items.find(f_lines[i]);
-        item_counts[lines[i]]++;
-    }
-
-    return true;
 }
 
 
@@ -75,10 +59,35 @@ void Dataset::print_top_k(size_t k) {
         return a.second >= b.second;
     });
 
-    cout << endl << "top 10" << endl;
+    cout << endl << "top " << k << endl;
 
     for(auto [fst, snd] : sorted)
     {
-        cout << *fst << "  " << snd << endl;
+        cout << "\"" << *fst << "\" (" << fst << "): " << snd << endl;
     }
+}
+
+BackingItems get_backing_items(vector<string> file_names) {
+    BackingItems backing_items;
+    for (const string& file_name : file_names) {
+        ifstream f(file_name);
+
+        if(!f.is_open()) {
+            throw std::invalid_argument("Unable to open file");
+        }
+
+        string line;
+        // Skip header
+        getline(f, line);
+        while(getline(f, line)) {
+            size_t query_start = line.find('\t') + 1;
+            size_t query_end = line.find('\t', query_start);
+            string s = line.substr(query_start, query_end - query_start);
+
+            backing_items.insert(s);
+        }
+        f.close();
+    }
+
+    return backing_items;
 }

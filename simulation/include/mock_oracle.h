@@ -4,17 +4,30 @@
 #include <string>
 #include <unordered_map>
 #include <random>
+#include <iostream>
 
 #include "dataset.h"
 
 using namespace std;
 
 struct MockOracle {
+    virtual ~MockOracle() = default;
+
     MockOracle(double ep, Dataset& ds): ep(ep), ds(ds) {
         estimates.reserve(ds.item_counts.size());
     }
 
-    double estimate(const string* item) { return estimates[item]; }
+    /**
+     * Estimate is constrained to be at least 1.
+     */
+    double estimate(const string* item) const {
+        const double N = ds.lines.size();
+
+        if (const auto it = estimates.find(item); it != estimates.end()) {
+            return max(1., it->second) / N;
+        }
+        return 1. / N;
+    }
 
     virtual void reset_estimates(){};
 
@@ -26,7 +39,7 @@ struct MockOracle {
     Dataset& ds;
 };
 
-struct MockOracleRelativeError : MockOracle {
+struct MockOracleRelativeError final : MockOracle {
     MockOracleRelativeError(double ep, Dataset& ds): MockOracle(ep, ds) {}
 
     void reset_estimates() override {
@@ -45,7 +58,7 @@ struct MockOracleRelativeError : MockOracle {
     }
 };
 
-struct MockOracleAbsoluteError : MockOracle {
+struct MockOracleAbsoluteError final : MockOracle {
     MockOracleAbsoluteError(double ep, Dataset& ds): MockOracle(ep, ds) {}
 
     void reset_estimates() override {
@@ -64,7 +77,7 @@ struct MockOracleAbsoluteError : MockOracle {
     }
 };
 
-struct MockOracleBinomialError : MockOracle {
+struct MockOracleBinomialError final : MockOracle {
     MockOracleBinomialError(double ep, Dataset& ds): MockOracle(ep, ds) {}
 
     void reset_estimates() override {
@@ -85,8 +98,8 @@ struct MockOracleBinomialError : MockOracle {
     }
 };
 
-struct ExactOracle : MockOracle {
-    ExactOracle(Dataset& ds): MockOracle(0, ds){}
+struct ExactOracle final : MockOracle {
+    explicit ExactOracle(Dataset& ds): MockOracle(0, ds){}
 
     void reset_estimates() override {
         for(auto& item : ds.item_counts) {

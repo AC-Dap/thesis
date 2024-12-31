@@ -22,24 +22,32 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set()
+
+# +
+### Load data
+df1 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
+df1['Query'] = df1['Query'].fillna("")
+unique_counts1 = df1['Query'].value_counts()
+unique_freqs1 = unique_counts1 / len(df1)
+
+df2 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-02.txt', sep='\t')
+df2['Query'] = df2['Query'].fillna("")
+unique_counts2 = df2['Query'].value_counts()
+unique_freqs2 = unique_counts2 / len(df2)
 # -
 
-### Load data
-df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
-df['Query'] = df['Query'].fillna("")
-unique_counts = df['Query'].value_counts()
-unique_freqs = unique_counts / len(df)
-
-print(df.head())
-print(unique_counts.head(), len(unique_counts))
-print(unique_freqs.head())
+# print(df.head())
+# print(unique_counts.head(), len(unique_counts))
+# print(unique_freqs.head())
+print(unique_counts1[~unique_counts1.index.isin(unique_counts2.index)])
 
 # +
 for k in range(16):
     # plt.axhline(10 ** (-7*k/16), c='r', linestyle='--')
     plt.axhline(k/2048, c='g', linestyle='--')
 
-plt.plot(np.arange(len(unique_counts)), unique_freqs)
+plt.plot(np.arange(len(unique_counts1)), unique_freqs1, c='b')
+plt.plot(np.arange(len(unique_counts2)), unique_freqs2, c='r')
 
 
 plt.xlabel('Rank')

@@ -11,7 +11,8 @@
 
 using namespace std;
 
-constexpr char const *DATA_PATH = "../data/AOL-user-ct-collection/user-ct-test-collection-01.txt";
+constexpr char const *TRAIN_PATH = "../data/AOL-user-ct-collection/user-ct-test-collection-01.txt";
+constexpr char const *TEST_PATH = "../data/AOL-user-ct-collection/user-ct-test-collection-02.txt";
 
 // Write mode to use for data file, if the file already exists.
 enum FileWriteMode {
@@ -50,10 +51,11 @@ void run_sims(Results &results, vector<size_t> &ks, size_t n_sims,
 }
 
 int main() {
-    Dataset ds;
-    if (!ds.read_from_file(DATA_PATH)) {
-        return -1;
-    }
+    BackingItems backing_items = get_backing_items({TRAIN_PATH, TEST_PATH});
+
+    Dataset ds_train(backing_items), ds_test(backing_items);
+    ds_train.read_from_file(TRAIN_PATH);
+    ds_test.read_from_file(TEST_PATH);
 
     constexpr size_t total_trials = 30;
     vector<size_t> degs = {3, 4};
@@ -62,10 +64,10 @@ int main() {
     constexpr size_t min_freq = 7;
     constexpr double ep = 0.05;
 
-    MockOracleAbsoluteError o_abs(ep, ds);
-    MockOracleRelativeError o_rel(ep, ds);
-    MockOracleBinomialError o_bin(ep, ds);
-    ExactOracle o_exact(ds);
+    MockOracleAbsoluteError o_abs(ep, ds_train);
+    MockOracleRelativeError o_rel(ep, ds_train);
+    MockOracleBinomialError o_bin(ep, ds_train);
+    ExactOracle o_exact(ds_train);
     vector<MockOracle*> os = {&o_abs, &o_rel, &o_bin, &o_exact};
 
     FileWriteMode mode = SKIP;
@@ -84,7 +86,7 @@ int main() {
             results, ks, total_trials,
             "ppswor",
             [&](size_t k, size_t n_trials) {
-                return run_n_ppswor_sims(k, deg, n_trials, ds);
+                return run_n_ppswor_sims(k, deg, n_trials, ds_test);
             },
             mode
         );
@@ -94,7 +96,7 @@ int main() {
             results, ks, total_trials,
             "exact",
             [&](size_t k, size_t n_trials) {
-                return run_n_swa_sims(0, k, 0, o_exact, deg, n_trials, ds);
+                return run_n_swa_sims(0, k, 0, o_exact, deg, n_trials, ds_test);
             },
             mode
         );
@@ -108,7 +110,7 @@ int main() {
                 results, ks, total_trials,
                 format("swa_{}_kh=0_kp=k_ku=0", o->name()),
                 [&](size_t k, size_t n_trials) {
-                    return run_n_swa_sims(0, k, 0, *o, deg, n_trials, ds);
+                    return run_n_swa_sims(0, k, 0, *o, deg, n_trials, ds_test);
                 },
                 mode
             );
@@ -118,7 +120,7 @@ int main() {
                 results, ks, total_trials,
                 format("swa_{}_kh=k/2_kp=k/2_ku=0", o->name()),
                 [&](size_t k, size_t n_trials) {
-                    return run_n_swa_sims(k / 2, k / 2, 0, *o, deg, n_trials, ds);
+                    return run_n_swa_sims(k / 2, k / 2, 0, *o, deg, n_trials, ds_test);
                 },
                 mode
             );
@@ -128,7 +130,7 @@ int main() {
                 results, ks, total_trials,
                 format("swa_{}_kh=0_kp=k/2_ku=k/2", o->name()),
                 [&](size_t k, size_t n_trials) {
-                    return run_n_swa_sims(0, k / 2, k / 2, *o, deg, n_trials, ds);
+                    return run_n_swa_sims(0, k / 2, k / 2, *o, deg, n_trials, ds_test);
                 },
                 mode
             );
@@ -167,7 +169,7 @@ int main() {
                                 sketch,
                                 n_trials,
                                 *o,
-                                ds
+                                ds_test
                             );
                         },
                         mode
@@ -191,7 +193,7 @@ int main() {
                                 sketch,
                                 n_trials,
                                 *o,
-                                ds
+                                ds_test
                             );
                         },
                         mode
@@ -222,7 +224,7 @@ int main() {
                             sketch,
                             n_trials,
                             *o,
-                            ds
+                            ds_test
                         );
                     },
                     mode
@@ -246,7 +248,7 @@ int main() {
                             sketch,
                             n_trials,
                             *o,
-                            ds
+                            ds_test
                         );
                     },
                     mode
@@ -275,7 +277,7 @@ int main() {
                             sketch,
                             n_trials,
                             *o,
-                            ds
+                            ds_test
                         );
                     },
                     mode

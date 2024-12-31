@@ -21,12 +21,17 @@ import seaborn as sns
 
 sns.set()
 
+
 # %%
 ### Load data
-df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
-df['Query'] = df['Query'].fillna("")
-unique_counts = df['Query'].value_counts()
-df.head()
+def load_data(path):
+    df = pd.read_csv(path, sep='\t')
+    df['Query'] = df['Query'].fillna("")
+    unique_counts = df['Query'].value_counts()
+    return df, unique_counts
+
+df_train, unique_counts_train = load_data('data/AOL-user-ct-collection/user-ct-test-collection-01.txt')
+df, unique_counts = load_data('data/AOL-user-ct-collection/user-ct-test-collection-02.txt')
 
 # %%
 plt.plot(np.arange(len(unique_counts)), unique_counts)
@@ -47,15 +52,30 @@ plt.title('Rank vs. Frequency of search results')
 plt.savefig('figs/aol_rank_frequency')
 
 # %%
+oracle_guesses = np.empty(len(unique_counts))
+i = 0
+for value, count in unique_counts.items():
+    oracle_guesses[i] = unique_counts_train[value] if (value in unique_counts_train) else 1
+    i += 1
+plt.plot(unique_counts / len(df), oracle_guesses / len(df_train))
+plt.plot(unique_counts / len(df), oracle_guesses / len(df))
+# plt.plot(unique_counts / len(df), unique_counts / len(df), c='r')
+
+# plt.plot(unique_counts / len(df), np.abs((unique_counts / len(df)) - (oracle_guesses / len(df_train))), c='r')
+
+# %%
 sim_folder = "simulation/results"
+
+deg3_results = pd.read_csv(f"{sim_folder}/deg=3/deg=3_results.csv")
+deg4_results = pd.read_csv(f"{sim_folder}/deg=4/deg=4_results.csv")
 
 nsims = 30
 sample_sizes = [2**i for i in range(6, 17)]
-def read_sim_data(deg, algo, params):
-    with open(f"{sim_folder}/deg={deg}/{algo}/{algo}_{params}.txt", 'r') as f:
-        lines = [line.rstrip() for line in f]
-        return [float.fromhex(lines[i]) for i in range(min(nsims, len(lines)))]
-
+def read_sim_data(deg, sketch_type, k):
+    df = deg3_results if deg == 3 else deg4_results
+    mask = (df["sketch_type"] == sketch_type) & (df["k"] == k)
+    return df[mask]["estimate"].apply(float.fromhex).to_numpy()
+    
 def get_exact_moment(deg):
     return float(sum([val**deg for val in unique_counts]))
 
@@ -158,10 +178,10 @@ def plot_error_sample_size(deg, error_type):
 
     prefix = error_prefix(error_type)
     
-    ppswor_results = [read_sim_data(deg, "ppswor", f"k={k}_deg={deg}") for k in sample_sizes]
-    swa_1_results = [read_sim_data(deg, f"swa_{prefix}", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_2_results = [read_sim_data(deg, f"swa_{prefix}", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_3_results = [read_sim_data(deg, f"swa_{prefix}", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    ppswor_results = [read_sim_data(deg, "ppswor", k) for k in sample_sizes]
+    swa_1_results = [read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_2_results = [read_sim_data(deg, f"swa_{prefix}_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_3_results = [read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
     
     fig, ax = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(12, 5))
     
@@ -206,17 +226,17 @@ def plot_error_oracle_types(deg):
     true_value = get_exact_moment(deg)
     print(true_value)
     
-    swa_rel_1_results = [read_sim_data(deg, "swa_rel", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_2_results = [read_sim_data(deg, "swa_rel", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_3_results = [read_sim_data(deg, "swa_rel", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(deg, "swa_rel_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_rel_3_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
 
-    swa_abs_1_results = [read_sim_data(deg, "swa_abs", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_2_results = [read_sim_data(deg, "swa_abs", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_3_results = [read_sim_data(deg, "swa_abs", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_abs_1_results = [read_sim_data(deg, "swa_abs_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_abs_2_results = [read_sim_data(deg, "swa_abs_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_abs_3_results = [read_sim_data(deg, "swa_abs_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
 
-    swa_bin_1_results = [read_sim_data(deg, "swa_bin", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_2_results = [read_sim_data(deg, "swa_bin", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_3_results = [read_sim_data(deg, "swa_bin", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_bin_1_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_bin_2_results = [read_sim_data(deg, "swa_bin_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_bin_3_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
     
     fig, ax = plt.subplots(3, 3,  sharex=True, sharey=True, figsize=(12, 5))
     
@@ -259,10 +279,10 @@ def plot_error_oracle_types(deg):
     true_value = get_exact_moment(deg)
     print(true_value)
     
-    exact_results = [read_sim_data(deg, "exact", f"k={k}_deg={deg}") for k in sample_sizes]
-    swa_rel_results = [read_sim_data(deg, "swa_rel", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_results = [read_sim_data(deg, "swa_abs", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_results = [read_sim_data(deg, "swa_bin", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    exact_results = [read_sim_data(deg, "exact", k) for k in sample_sizes]
+    swa_rel_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_abs_results = [read_sim_data(deg, "swa_abs_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_bin_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k_ku=0", k) for k in sample_sizes]
     
     fig, ax = plt.subplots(2, 2,  sharex=True, sharey=True, figsize=(12, 5))
     
@@ -296,12 +316,12 @@ def plot_mse_rel(deg):
     true_value = float(sum([val**deg for val in unique_counts]))
     print(true_value)
     
-    ppswor_results = [read_sim_data(deg, "ppswor", f"k={k}_deg={deg}") for k in sample_sizes]
-    exact_results = [read_sim_data("exact", deg, f"k={k}_deg={deg}") for k in sample_sizes]
+    ppswor_results = [read_sim_data(deg, "ppswor", k) for k in sample_sizes]
+    exact_results = [read_sim_data(deg, "exact", k) for k in sample_sizes]
     
-    swa_rel_1_results = [read_sim_data(deg, "swa_rel", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_2_results = [read_sim_data(deg, "swa_rel", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_3_results = [read_sim_data(deg, "swa_rel", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
+    swa_rel_3_results = [read_sim_data(deg, "swa_rel_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
 
     fig, ax = plt.subplots()
     
@@ -339,21 +359,21 @@ def plot_mse_error(deg):
     true_value = float(sum([val**deg for val in unique_counts]))
     print(true_value)
     
-    ppswor_results = [read_sim_data(deg, "ppswor", f"k={k}_deg={deg}") for k in sample_sizes]
-    exact_results = [read_sim_data(deg, "exact", f"k={k}_deg={deg}") for k in sample_sizes]
+    ppswor_results = [read_sim_data(deg, "ppswor", k) for k in sample_sizes]
+    exact_results = [read_sim_data(deg, "exact", k) for k in sample_sizes]
+
+    swa_rel_1_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
+    swa_rel_3_results = [read_sim_data(deg, "swa_rel_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+
+    swa_abs_1_results = [read_sim_data(deg, "swa_abs_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_abs_2_results = [read_sim_data(deg, "swa_abs_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
+    swa_abs_3_results = [read_sim_data(deg, "swa_abs_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+
+    swa_bin_1_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_bin_2_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
+    swa_bin_3_results = [read_sim_data(deg, "swa_bin_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
     
-    swa_rel_1_results = [read_sim_data(deg, "swa_rel", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_2_results = [read_sim_data(deg, "swa_rel", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_3_results = [read_sim_data(deg, "swa_rel", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-
-    swa_abs_1_results = [read_sim_data(deg, "swa_abs", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_2_results = [read_sim_data(deg, "swa_abs", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_3_results = [read_sim_data(deg, "swa_abs", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-
-    swa_bin_1_results = [read_sim_data(deg, "swa_bin", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_2_results = [read_sim_data(deg, "swa_bin", f"k=0-{k//2}-{k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_3_results = [read_sim_data(deg, "swa_bin", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-
     fig, ax = plt.subplots()
     
     plot_mse(ax, sample_sizes, ppswor_results, true_value, "PPSWOR", 'r')
@@ -399,12 +419,12 @@ def plot_mse_error(deg):
     true_value = float(sum([val**deg for val in unique_counts]))
     print(true_value)
     
-    exact_results = [read_sim_data(deg, "exact", f"k={k}_deg={deg}") for k in sample_sizes]
+    exact_results = [read_sim_data(deg, "exact", k) for k in sample_sizes]
     
-    swa_rel_1_results = [read_sim_data(deg, "swa_rel", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_rel_2_results = [read_sim_data(deg, "swa_rel", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_1_results = [read_sim_data(deg, "swa_bin", f"k=0-{k}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_2_results = [read_sim_data(deg, "swa_bin", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_rel_1_results = [read_sim_data(deg, "swa_rel_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_rel_2_results = [read_sim_data(deg, "swa_rel_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_bin_1_results = [read_sim_data(deg, "swa_bin_kh=0_kp=k_ku=0", k) for k in sample_sizes]
+    swa_bin_2_results = [read_sim_data(deg, "swa_bin_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
 
     fig, ax = plt.subplots()
     
@@ -441,20 +461,20 @@ def plot_mse_error(deg):
     true_value = float(sum([val**deg for val in unique_counts]))
     print(true_value)
     
-    exact_results = [read_sim_data(deg, "exact", f"k={k}_deg={deg}") for k in sample_sizes]
+    exact_results = [read_sim_data(deg, "exact", k) for k in sample_sizes]
     
-    swa_rel_results = [read_sim_data(deg, "swa_rel", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_bin_results = [read_sim_data(deg, "swa_bin", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
-    swa_abs_results = [read_sim_data(deg, "swa_abs", f"k={k//2}-{k//2}-0_ep={ep}_deg={deg}") for k in sample_sizes]
+    swa_rel_results = [read_sim_data(deg, "swa_rel_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_bin_results = [read_sim_data(deg, "swa_bin_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
+    swa_abs_results = [read_sim_data(deg, "swa_abs_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
 
     n_est_type = "harm"
-    expo_rel_1 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_rel", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-    expo_bin_1 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_bin", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-    expo_abs_1 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_abs", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+    expo_rel_1 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_rel_k=k/2_kh=k/2", k) for k in sample_sizes]
+    expo_bin_1 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_bin_k=k/2_kh=k/2", k) for k in sample_sizes]
+    expo_abs_1 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_abs_k=k/2_kh=k/2", k) for k in sample_sizes]
 
-    expo_rel_2 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_rel", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-    expo_bin_2 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_bin", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-    expo_abs_2 = [read_sim_data(deg, f"expo_bucket_{n_est_type}_abs", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+    expo_rel_2 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_rel_k=k_kh=0", k) for k in sample_sizes]
+    expo_bin_2 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_bin_k=k_kh=0", k) for k in sample_sizes]
+    expo_abs_2 = [read_sim_data(deg, f"bucket_expo_{n_est_type}_abs_k=k_kh=0", k) for k in sample_sizes]
     
     fig, ax = plt.subplots()
     
@@ -470,7 +490,7 @@ def plot_mse_error(deg):
     plot_mse(ax, sample_sizes, expo_abs_1, true_value, "Bucket: Absolute Error,\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'purple')
 
     plot_mse(ax, sample_sizes, expo_rel_2, true_value, "Bucket: Relative Error,\n$B = k, k_h = 0$", 'pink')
-    plot_mse(ax, sample_sizes, expo_bin_2, true_value, "Bucket: Binomial Error,\n$B = k, k_h = 0$", 'brown')
+    plot_mse(ax, sample_sizes, expo_bin_2, true_value, "Bucket: Binomial Error,\n$B = k, k_h = 0$", 'black')
     plot_mse(ax, sample_sizes, expo_abs_2, true_value, "Bucket: Absolute Error,\n$B = k, k_h = 0$", 'grey')
 
     plt.legend()
@@ -503,10 +523,8 @@ def plot_bucketing_sketches(deg):
             c = [('r', 'g'), ('b', 'y'), ('maroon', 'black'), ('gold', 'pink'), ('purple', 'cyan')]
             est_type_label = ["Lower bound", "Upper bound", "Arithmetic mean", "Geometric mean", "Harmonic mean"]
             for l, n_est_type in enumerate(["lower", "upper", "arith", "geo", "harm"]):
-                param_no_hh = lambda k, ep, deg: f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}" if i == 1 else f"k={k}_khh={0}_ep={ep}_deg={deg}"
-                param_with_hh = lambda k, ep, deg: f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}" if i == 1 else f"k={k//2}_khh={k//2}_ep={ep}_deg={deg}"
-                no_hh = [read_sim_data(deg, f"{bucket_type}_bucket_{n_est_type}_{oracle_type}", param_no_hh(k, ep, deg)) for k in sample_sizes]
-                with_hh = [read_sim_data(deg, f"{bucket_type}_bucket_{n_est_type}_{oracle_type}", param_with_hh(k, ep, deg)) for k in sample_sizes]
+                no_hh = [read_sim_data(deg, f"bucket_{bucket_type}_{n_est_type}_{oracle_type}_k=k_kh=0", k) for k in sample_sizes]
+                with_hh = [read_sim_data(deg, f"bucket_{bucket_type}_{n_est_type}_{oracle_type}_k=k/2_kh=k/2", k) for k in sample_sizes]
 
                 plot_abs_curve(ax[i][j], sample_sizes, no_hh, true_value, f"{est_type_label[l]}:\n$B=k, k_h = 0$", c[l][0])
                 plot_abs_curve(ax[i][j], sample_sizes, with_hh, true_value, f"{est_type_label[l]}:\n$B=\\frac{{k}}{{2}}, k_h = \\frac{{k}}{{2}}$", c[l][1])
@@ -547,11 +565,11 @@ def plot_bucketing_kh_sketches(deg):
     c = [('r', 'g'), ('b', 'y'), ('maroon', 'black'), ('gold', 'pink'), ('purple', 'cyan')]
     est_type_label = ["Lower bound", "Upper bound", "Arithmetic mean", "Geometric mean", "Harmonic mean"]
     for l, n_est_type in enumerate(["lower", "upper", "arith", "geo", "harm"]):
-        linear_no_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_rel", f"k={k}_khh={0}_ep={ep}_deg={deg}") for k in sample_sizes]
-        linear_with_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_rel", f"k={k//2}_khh={k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
+        linear_no_hh = [read_sim_data(deg, f"bucket_linear_{n_est_type}_rel_k=k_kh=0", k) for k in sample_sizes]
+        linear_with_hh = [read_sim_data(deg, f"bucket_linear_{n_est_type}_rel_k=k/2_kh=k/2", k) for k in sample_sizes]
 
-        expo_no_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_rel", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-        expo_with_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_rel", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+        expo_no_hh = [read_sim_data(deg, f"bucket_expo_{n_est_type}_rel_k=k_kh=0", k) for k in sample_sizes]
+        expo_with_hh = [read_sim_data(deg, f"bucket_expo_{n_est_type}_rel_k=k/2_kh=k/2", k) for k in sample_sizes]
         
         plot_mse(ax[0], sample_sizes, linear_no_hh, true_value, f"{est_type_label[l]}:\n$B=k, k_h = 0$", c[l][0])
         plot_mse(ax[0], sample_sizes, linear_with_hh, true_value, f"{est_type_label[l]}:\n$B=\\frac{{k}}{{2}}, k_h = \\frac{{k}}{{2}}$", c[l][1])
@@ -591,20 +609,20 @@ def plot_bucketing_kh_sketches(deg):
     fig, ax = plt.subplots(1, 2, sharey=True, sharex=True, figsize=(10, 6))
 
     c = [('r', 'g'), ('b', 'y'), ('gold', 'pink')]
-    est_type_label = ["Unbiased estimator", "2 Summary estimator", "Harmonic mean estimator"]
+    est_type_label = ["Unbiased estimator", "2 Summary estimator", "Arithmetic mean estimator"]
     oracle_type = 'rel'
-    for l, n_est_type in enumerate(["cond", "alt", "harm"]):
+    for l, n_est_type in enumerate(["cond", "alt", "arith"]):
         if n_est_type == "cond":
-            linear_with_hh = [read_sim_data(deg, f"linear_bucket_cond_{oracle_type}", f"k={1}_khh={k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
-            expo_with_hh = [read_sim_data(deg, f"expo_bucket_cond_{oracle_type}", f"k={1}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+            linear_with_hh = [read_sim_data(deg, f"cond_bucket_linear_{oracle_type}_k=1_kh=k", k) for k in sample_sizes]
+            expo_with_hh = [read_sim_data(deg, f"cond_bucket_expo_{oracle_type}_k=1_kh=k", k) for k in sample_sizes]
             plot_mse(ax[0], sample_sizes, linear_with_hh, true_value, f"{est_type_label[l]}", c[l][1])
             plot_mse(ax[1], sample_sizes, expo_with_hh, true_value, f"{est_type_label[l]}", c[l][1])
         else:
-            linear_no_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_{oracle_type}", f"k={k}_khh={0}_ep={ep}_deg={deg}") for k in sample_sizes]
-            linear_with_hh = [read_sim_data(deg, f"linear_bucket_{n_est_type}_{oracle_type}", f"k={k//2}_khh={k//2}_ep={ep}_deg={deg}") for k in sample_sizes]
+            linear_no_hh = [read_sim_data(deg, f"bucket_linear_{n_est_type}_{oracle_type}_k=k_kh=0", k) for k in sample_sizes]
+            linear_with_hh = [read_sim_data(deg, f"bucket_linear_{n_est_type}_{oracle_type}_k=k/2_kh=k/2", k) for k in sample_sizes]
     
-            expo_no_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_{oracle_type}", f"k={k}_khh={0}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
-            expo_with_hh = [read_sim_data(deg, f"expo_bucket_{n_est_type}_{oracle_type}", f"k={k//2}_khh={k//2}_min_freq=7_ep={ep}_deg={deg}") for k in sample_sizes]
+            expo_no_hh = [read_sim_data(deg, f"bucket_expo_{n_est_type}_{oracle_type}_k=k_kh=0", k) for k in sample_sizes]
+            expo_with_hh = [read_sim_data(deg, f"bucket_expo_{n_est_type}_{oracle_type}_k=k/2_kh=k/2", k) for k in sample_sizes]
         
             plot_mse(ax[0], sample_sizes, linear_no_hh, true_value, f"{est_type_label[l]}:\n$B=k, k_h = 0$", c[l][0])
             plot_mse(ax[0], sample_sizes, linear_with_hh, true_value, f"{est_type_label[l]}:\n$B=\\frac{{k}}{{2}}, k_h = \\frac{{k}}{{2}}$", c[l][1])

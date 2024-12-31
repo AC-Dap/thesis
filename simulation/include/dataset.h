@@ -12,8 +12,16 @@ typedef vector<const string*> DatasetLines;
 typedef unordered_set<const string*> DatasetItems;
 typedef unordered_map<const string*, size_t> DatasetItemCounts;
 
+/**
+ * Set of allocated strings to maintain string pointers
+ */
+typedef unordered_set<string> BackingItems;
+
 struct Dataset {
-    bool read_from_file(const char* path);
+
+    explicit Dataset(BackingItems& backing_items): backing_items_(backing_items) {}
+
+    void read_from_file(const char* path);
     void print_top_k(size_t k);
 
     DatasetLines lines;
@@ -21,8 +29,9 @@ struct Dataset {
     DatasetItemCounts item_counts;
 
 private:
-    // Array of allocated strings to maintain string pointers
-    unordered_set<string> _backing_items;
+    BackingItems& backing_items_;
 };
+
+BackingItems get_backing_items(vector<string> file_names);
 
 #endif

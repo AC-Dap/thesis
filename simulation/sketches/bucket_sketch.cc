@@ -22,13 +22,11 @@ Buckets generate_linear_buckets(size_t k) {
     return buckets;
 }
 
-void process_ds_to_buckets(const function<void(double, size_t)> process_item, Heap<tuple<long double, const string*>> top_h, MockOracle& o, const Dataset& ds) {
-    size_t N = ds.lines.size();
-
+void process_ds_to_buckets(const function<void(double, size_t)> process_item, Heap<tuple<long double, const string*>>& top_h, MockOracle& o, const Dataset& ds) {
     // Place each item into the correct bucket
     for (auto& item : ds.item_counts) {
         // Constrain estimate between 1/N and 1
-        double freq_est = min(1., max(1., o.estimate(item.first)) / N);
+        double freq_est = min(1., o.estimate(item.first));
         size_t S = item.second;
 
         // First try and see if we want to store anything in top_h
