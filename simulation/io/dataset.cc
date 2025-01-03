@@ -2,20 +2,17 @@
 
 #include <vector>
 #include <string>
-#include <unordered_set>
-#include <unordered_map>
 #include <iostream>
 #include <fstream>
-#include <algorithm>
 #include <chrono>
 
 using namespace std;
 
-void Dataset::read_from_file(const char* path) {
+void Dataset::read_from_file(const string& path) {
     ifstream f(path);
 
     if(!f.is_open()) {
-        throw std::invalid_argument("Unable to open file");
+        throw std::invalid_argument("Unable to open dataset: " + path);
     }
 
     auto t1 = chrono::high_resolution_clock::now();
@@ -29,14 +26,13 @@ void Dataset::read_from_file(const char* path) {
         size_t query_end = line.find('\t', query_start);
         string s = line.substr(query_start, query_end - query_start);
 
-        auto query_ptr = backing_items_.find(s);
-        if (query_ptr == backing_items_.end()) {
+        if (!backing_items_.contains(s)) {
             throw std::invalid_argument("Entry \"" + s + "\" not found in backing items");
         }
 
-        lines.push_back(&*query_ptr);
-        items.insert(&*query_ptr);
-        item_counts[&*query_ptr]++;
+        auto item_id = backing_items_[s];
+        lines.push_back(item_id);
+        item_counts[item_id]++;
     }
     f.close();
 
@@ -46,45 +42,30 @@ void Dataset::read_from_file(const char* path) {
          << " seconds" << endl;
 }
 
-
-void Dataset::print_top_k(size_t k) {
-    // create container for top 10
-    vector<pair<const string*, int>> sorted(k);
-
-    // sort and copy with reversed compare function using second value of std::pair
-    partial_sort_copy(item_counts.begin(), item_counts.end(),
-                      sorted.begin(), sorted.end(),
-                      [](const pair<const string*, int> &a, const pair<const string*, int> &b)
-    {
-        return a.second >= b.second;
-    });
-
-    cout << endl << "top " << k << endl;
-
-    for(auto [fst, snd] : sorted)
-    {
-        cout << "\"" << *fst << "\" (" << fst << "): " << snd << endl;
-    }
-}
-
-BackingItems get_backing_items(vector<string> file_names) {
+BackingItems get_backing_items(const vector<string>& file_names) {
     BackingItems backing_items;
+    ItemId nextId = 0;
+
     for (const string& file_name : file_names) {
         ifstream f(file_name);
 
         if(!f.is_open()) {
-            throw std::invalid_argument("Unable to open file");
+            throw std::invalid_argument("Unable to open dataset: " + file_name);
         }
 
         string line;
         // Skip header
         getline(f, line);
+
         while(getline(f, line)) {
             size_t query_start = line.find('\t') + 1;
             size_t query_end = line.find('\t', query_start);
             string s = line.substr(query_start, query_end - query_start);
 
-            backing_items.insert(s);
+            if (!backing_items.contains(s)) {
+                backing_items[s] = nextId;
+                nextId++;
+            }
         }
         f.close();
     }

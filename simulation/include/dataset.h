@@ -3,35 +3,33 @@
 
 #include <vector>
 #include <string>
-#include <unordered_set>
 #include <unordered_map>
 
 using namespace std;
 
-typedef vector<const string*> DatasetLines;
-typedef unordered_set<const string*> DatasetItems;
-typedef unordered_map<const string*, size_t> DatasetItemCounts;
-
 /**
- * Set of allocated strings to maintain string pointers
+ * Mapping from unique strings to ids.
  */
-typedef unordered_set<string> BackingItems;
+typedef size_t ItemId;
+typedef unordered_map<string, ItemId> BackingItems;
+
+typedef vector<ItemId> DatasetLines;
+typedef vector<size_t> DatasetItemCounts;
 
 struct Dataset {
 
-    explicit Dataset(BackingItems& backing_items): backing_items_(backing_items) {}
+    explicit Dataset(BackingItems& backing_items):
+        backing_items_(backing_items), item_counts(backing_items.size(), 0) {}
 
-    void read_from_file(const char* path);
-    void print_top_k(size_t k);
+    void read_from_file(const string& path);
 
     DatasetLines lines;
-    DatasetItems items;
     DatasetItemCounts item_counts;
 
 private:
     BackingItems& backing_items_;
 };
 
-BackingItems get_backing_items(vector<string> file_names);
+BackingItems get_backing_items(const vector<string>& file_names);
 
 #endif

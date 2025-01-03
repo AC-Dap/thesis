@@ -4,7 +4,7 @@
  * Tries inserting `item` into the heap `h`, return true if an overflow occurs.
  * If the heap is full, we update `o_item` and `o_count` with the overflowed item.
  */
-bool try_insert(Heap<tuple<double, const string*, size_t>>& h, tuple<double, const string*, size_t> item, const string*& o_item, size_t& o_count) {
+bool try_insert(Heap<tuple<double, ItemId, size_t>>& h, tuple<double, ItemId, size_t> item, ItemId& o_item, size_t& o_count) {
     if(h.len < h.cap) {
         h.push(item);
         return false;
@@ -16,7 +16,7 @@ bool try_insert(Heap<tuple<double, const string*, size_t>>& h, tuple<double, con
     return true;
 }
 
-void SWA::update(const string* item, size_t count) {
+void SWA::update(ItemId item, size_t count) {
     // Check if item is already in heap; if so, just update count
     // Shouldn't need to reheapify, since heap is not ordered by count
     for(int i = 0; i < h_heap.len; i++){
@@ -40,7 +40,7 @@ void SWA::update(const string* item, size_t count) {
 
     // Insertion order: h_heap -> p_heap -> u_heap
     auto weight = oracle.estimate(item);
-    const string* o_item = item;
+    ItemId o_item = item;
     size_t o_count = count;
     if(!try_insert(h_heap, {weight, o_item, o_count}, o_item, o_count)) return;
 
@@ -51,8 +51,8 @@ void SWA::update(const string* item, size_t count) {
     try_insert(u_heap, {weight, o_item, o_count}, o_item, o_count);
 }
 
-tuple<vector<const string*>, vector<double>, vector<double>> SWA::sample() {
-    vector<const string*> s(kh + kp + ku);
+tuple<vector<ItemId>, vector<double>, vector<double>> SWA::sample() {
+    vector<ItemId> s(kh + kp + ku);
     vector<double> weights(kh + kp + ku), probs(kh + kp + ku);
 
     for(int i = 0; i < kh; i++){

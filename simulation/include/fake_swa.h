@@ -1,7 +1,6 @@
 #ifndef FAKE_SWA_H
 #define FAKE_SWA_H
 
-#include <unordered_set>
 #include <vector>
 #include <string>
 #include <tuple>
@@ -16,7 +15,7 @@ using namespace std;
  *
  * We pass `items` by value, since we will modify it.
  */
-tuple<vector<const string*>, vector<double>, vector<double>> fake_swa_sample(
+tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
     size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds);
 
 #endif

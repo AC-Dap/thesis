@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -30,8 +30,14 @@ def load_data(path):
     unique_counts = df['Query'].value_counts()
     return df, unique_counts
 
+# df_train, unique_counts_train = load_data('data/fake_zipf_0.5_dataset/zipf_0.5_train.txt')
 df_train, unique_counts_train = load_data('data/AOL-user-ct-collection/user-ct-test-collection-01.txt')
-df, unique_counts = load_data('data/AOL-user-ct-collection/user-ct-test-collection-02.txt')
+df, unique_counts = load_data('data/fake_zipf_1.0_dataset/zipf_1.0_test_1.txt')# load_data('data/AOL-user-ct-collection/user-ct-test-collection-02.txt')
+
+# %%
+
+# %%
+unique_counts
 
 # %%
 plt.plot(np.arange(len(unique_counts)), unique_counts)
@@ -43,7 +49,14 @@ plt.title('Rank vs. Weight of search results')
 plt.savefig('figs/aol_rank_weight')
 
 # %%
-plt.plot(np.arange(len(unique_counts)), unique_counts / len(df))
+pareto_dataset = np.floor(100 * (1 + np.random.pareto(0.5, size=1000000)))
+print(len(pareto_dataset))
+print(len(df_train))
+_, unique_counts = np.unique(pareto_dataset, return_counts=True)
+print(len(unique_counts))
+plt.plot(np.arange(len(unique_counts)), unique_counts / len(pareto_dataset))
+plt.plot(np.arange(len(unique_counts_train)), unique_counts_train / len(df_train))
+
 plt.xlabel('Rank')
 plt.ylabel('Frequency')
 plt.xscale('log')
@@ -66,19 +79,22 @@ plt.plot(unique_counts / len(df), oracle_guesses / len(df))
 # %%
 sim_folder = "simulation/results"
 
-deg3_results = pd.read_csv(f"{sim_folder}/deg=3/deg=3_results.csv")
-deg4_results = pd.read_csv(f"{sim_folder}/deg=4/deg=4_results.csv")
+deg3_results = pd.read_csv(f"{sim_folder}/deg=3/deg=3_zipf_0.5_results.csv")# pd.read_csv(f"{sim_folder}/deg=3/deg=3_aol_results.csv")
+deg4_results = pd.read_csv(f"{sim_folder}/deg=4/deg=4_zipf_0.5_results.csv")# pd.read_csv(f"{sim_folder}/deg=4/deg=4_aol_results.csv")
 
 nsims = 30
 sample_sizes = [2**i for i in range(6, 17)]
-def read_sim_data(deg, sketch_type, k):
+def read_sim_data(deg, sketch_type, sample_sizes):
     df = deg3_results if deg == 3 else deg4_results
-    mask = (df["sketch_type"] == sketch_type) & (df["k"] == k)
-    return df[mask]["estimate"].apply(float.fromhex).to_numpy()
+    estimates = []
+    exacts = []
+    for k in sample_sizes:
+        mask = (df["sketch_type"] == sketch_type) & (df["k"] == k)
+        print(df.loc[mask, "estimate"])
+        estimates.append(df.loc[mask, "estimate"].apply(float.fromhex).to_numpy())
+        exacts.append(df.loc[mask, "exact"].to_numpy())
+    return np.array(estimates), np.array(exacts)
     
-def get_exact_moment(deg):
-    return float(sum([val**deg for val in unique_counts]))
-
 def nth(deg):
     return "3rd" if deg == 3 else f"{deg}th"
 
@@ -91,7 +107,6 @@ def error_prefix(err):
 
 # %%
 def plot_curve(ax, x, results, true_value, label, color):
-    results = np.array(results)
     error = (results - true_value) / true_value
     mean = np.mean(error, axis=1)
     lower = np.min(error, axis=1)
@@ -102,7 +117,6 @@ def plot_curve(ax, x, results, true_value, label, color):
     ax.legend()
 
 def plot_abs_curve(ax, x, results, true_value, label, color):
-    results = np.array(results)
     error = (results - true_value) / true_value
     mean = np.mean(np.abs(error), axis=1)
     upper = np.max(np.abs(error), axis=1)
@@ -112,7 +126,6 @@ def plot_abs_curve(ax, x, results, true_value, label, color):
     ax.legend()
 
 def plot_mse(ax, x, results, true_value, label, color, linestyle='solid'):
-    results = np.array(results)
     mse = np.sqrt(np.mean((results - true_value)**2, axis=1)) / true_value
     
     ax.plot(x, mse, label=label, color=color, linestyle=linestyle)
@@ -124,9 +137,6 @@ def plot_mse(ax, x, results, true_value, label, color, linestyle='solid'):
 
 def plot_error_sample_size(deg, error_type):
     ep = 0.05
-    
-    true_value = get_exact_moment(deg)
-    print(true_value)
 
     prefix = error_prefix(error_type)
     
@@ -178,17 +188,17 @@ def plot_error_sample_size(deg, error_type):
 
     prefix = error_prefix(error_type)
     
-    ppswor_results = [read_sim_data(deg, "ppswor", k) for k in sample_sizes]
-    swa_1_results = [read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k_ku=0", k) for k in sample_sizes]
-    swa_2_results = [read_sim_data(deg, f"swa_{prefix}_kh=k/2_kp=k/2_ku=0", k) for k in sample_sizes]
-    swa_3_results = [read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k/2_ku=k/2", k) for k in sample_sizes]
+    ppswor_results, ppswor_exacts = read_sim_data(deg, "ppswor", sample_sizes)
+    swa_1_results, swa_1_exacts = read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k_ku=0", sample_sizes)
+    swa_2_results, swa_2_exacts = read_sim_data(deg, f"swa_{prefix}_kh=k/2_kp=k/2_ku=0", sample_sizes)
+    swa_3_results, swa_3_exacts = read_sim_data(deg, f"swa_{prefix}_kh=0_kp=k/2_ku=k/2", sample_sizes)
     
     fig, ax = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(12, 5))
     
-    plot_abs_curve(ax[0], sample_sizes, ppswor_results, true_value, "PPSWOR", 'b')
-    plot_abs_curve(ax[1], sample_sizes, swa_1_results, true_value, "SWA: $k_h = 0$,\n$k_p = k, k_u = 0$", 'b')
-    plot_abs_curve(ax[2], sample_sizes, swa_2_results, true_value, "SWA: $k_h = 0$,\n$k_p = \\frac{k}{2}, k_u= \\frac{k}{2}$", 'r')
-    plot_abs_curve(ax[3], sample_sizes, swa_3_results, true_value, "SWA: $k_h = \\frac{k}{2}$,\n$k_p = \\frac{k}{2}, k_u = 0$", 'g')
+    plot_abs_curve(ax[0], sample_sizes, ppswor_results, ppswor_exacts, "PPSWOR", 'b')
+    plot_abs_curve(ax[1], sample_sizes, swa_1_results, swa_1_exacts, "SWA: $k_h = 0$,\n$k_p = k, k_u = 0$", 'b')
+    plot_abs_curve(ax[2], sample_sizes, swa_2_results, swa_2_exacts, "SWA: $k_h = 0$,\n$k_p = \\frac{k}{2}, k_u= \\frac{k}{2}$", 'r')
+    plot_abs_curve(ax[3], sample_sizes, swa_3_results, swa_3_exacts, "SWA: $k_h = \\frac{k}{2}$,\n$k_p = \\frac{k}{2}, k_u = 0$", 'g')
     
     # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
     # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')

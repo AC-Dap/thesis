@@ -2,7 +2,6 @@
 
 #include <tuple>
 #include <vector>
-#include <unordered_set>
 #include <algorithm>
 #include <array>
 
@@ -20,7 +19,7 @@ void CountSketch::reset() {
     reset_hashes();
 }
 
-void CountSketch::update(const string* item, double count) {
+void CountSketch::update(ItemId item, double count) {
     // Used later to guess if item is already in top_k or not
     double old_est = estimate(item);
 
@@ -56,7 +55,7 @@ void CountSketch::update(const string* item, double count) {
     }
 }
 
-double CountSketch::estimate(const string* item) {
+double CountSketch::estimate(ItemId item) {
     // Get estimates from each row
     array<double, depth> estimates{};
     for(int i = 0; i < depth; i++) {
@@ -71,8 +70,8 @@ double CountSketch::estimate(const string* item) {
     return estimates[n];
 }
 
-vector<const string*> CountSketch::heavy_hitters() {
-    vector<const string*> hh(k);
+vector<ItemId> CountSketch::heavy_hitters() const {
+    vector<ItemId> hh(k);
     for(int i = 0; i < top_k.len; i++) {
         hh[i] = get<1>(top_k.heap[i]);
     }

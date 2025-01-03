@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <tuple>
-#include <unordered_set>
 
 #include "mock_oracle.h"
 #include "hashing.h"
@@ -19,27 +18,27 @@ struct SWA {
         reset_hashes();
     }
 
-    void update(const string* item, size_t count);
-    tuple<vector<const string*>, vector<double>, vector<double>> sample();
+    void update(ItemId item, size_t count);
+    tuple<vector<ItemId>, vector<double>, vector<double>> sample();
 
-    inline size_t space_size() {
+    size_t space_size() const {
         return kh + kp + ku;
     }
 
-    inline void reset() {
+    void reset() {
         h_heap.len = p_heap.len = u_heap.len = 0;
         reset_hashes();
     }
 
-    inline void reset_hashes() {
+    void reset_hashes() {
         std::random_device rd;
         std::mt19937 gen(rd());
 
-        seed = generate_seed_function(gen, ds.items);
+        seed = generate_seed_function(gen, ds);
     }
 
     size_t kh, kp, ku, deg;
-    Heap<tuple<double, const string*, size_t>> h_heap, p_heap, u_heap;
+    Heap<tuple<double, ItemId, size_t>> h_heap, p_heap, u_heap;
 
     MockOracle& oracle;
     SeedFun seed;

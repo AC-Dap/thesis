@@ -2,21 +2,19 @@
 #define ESTIMATOR_H
 
 #include <vector>
-#include <unordered_map>
-#include <string>
 #include <cmath>
 
 #include "dataset.h"
 
 using namespace std;
 
-inline __int128 exact_moment(DatasetItemCounts& item_counts, size_t deg) {
-    __int128 sum = 0;
-    for(auto& item : item_counts) {
+inline __uint128_t calculate_exact_moment(Dataset& ds, size_t deg) {
+    __uint128_t sum = 0;
+    for(size_t item_count : ds.item_counts) {
         // Manual integer power instead of floating-point pow()
-        __int128 value = 1;
+        __uint128_t value = 1;
         for(size_t i = 0; i < deg; i++) {
-            value *= item.second;
+            value *= item_count;
         }
         sum += value;
     }

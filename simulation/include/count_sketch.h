@@ -3,7 +3,6 @@
 
 #include <tuple>
 #include <vector>
-#include <unordered_set>
 
 #include "heap.h"
 #include "hashing.h"
@@ -18,11 +17,11 @@ struct CountSketch {
     }
 
     void reset();
-    void update(const string* item, double count);
-    double estimate(const string* item);
-    vector<const string*> heavy_hitters();
+    void update(ItemId item, double count);
+    double estimate(ItemId item);
+    vector<ItemId> heavy_hitters() const;
 
-    size_t space_size() {
+    size_t space_size() const {
         return width * depth + k;
     }
 
@@ -34,15 +33,15 @@ struct CountSketch {
         std::mt19937 gen(rd());
 
         for(int i = 0; i < depth; i++) {
-            hashes[i] = generate_hash_function(gen, ds.items, width);
-            signs[i] = generate_sign_function(gen, ds.items);
+            hashes[i] = generate_hash_function(gen, ds, width);
+            signs[i] = generate_sign_function(gen, ds);
         }
     }
 
     size_t width, k;
     static constexpr size_t depth = 7;    // Fix depth to 7 for optimization
     vector<vector<double>> sketch;
-    Heap<tuple<double, const string*>> top_k;
+    Heap<tuple<double, ItemId>> top_k;
 
     vector<HashFun> hashes;
     vector<SignFun> signs;

@@ -1,7 +1,6 @@
 #ifndef PPSWOR_H
 #define PPSWOR_H
 
-#include <unordered_set>
 #include "count_sketch.h"
 #include "hashing.h"
 
@@ -14,10 +13,10 @@ struct PPSWOR {
         reset_seed();
     }
 
-    void update(const string* item, double count);
-    tuple<vector<const string*>, vector<double>, vector<double>> sample();
+    void update(ItemId item, double count);
+    tuple<vector<ItemId>, vector<double>, vector<double>> sample();
 
-    size_t space_size() {
+    size_t space_size() const {
         return cs.space_size();
     }
 
@@ -30,8 +29,10 @@ struct PPSWOR {
         std::random_device rd;
         std::mt19937 gen(rd());
 
-        seed = generate_seed_function(gen, ds.items);
-        for(auto& item : ds.items) {
+        seed = generate_seed_function(gen, ds);
+        for(ItemId item = 0; item < ds.item_counts.size(); item++) {
+            if (ds.item_counts[item] == 0) continue;
+            
             seed[item] = pow(seed[item], 1./deg);
         }
     }

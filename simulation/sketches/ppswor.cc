@@ -5,14 +5,14 @@
 
 using namespace std;
 
-void PPSWOR::update(const string* item, double count) {
+void PPSWOR::update(ItemId item, double count) {
     double w = count / seed[item];
     cs.update(item, w);
 }
 
-tuple<vector<const string*>, vector<double>, vector<double>> PPSWOR::sample() {
+tuple<vector<ItemId>, vector<double>, vector<double>> PPSWOR::sample() {
     auto hh = cs.heavy_hitters();
-    vector<const string*> items(k);
+    vector<ItemId> items(k);
     vector<double> weights(k), probs(k);
 
     auto tau = cs.estimate(hh[0]);
