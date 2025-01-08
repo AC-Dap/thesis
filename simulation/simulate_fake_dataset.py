@@ -48,10 +48,19 @@ if __name__ == "__main__":
                         f"fake_{a}_results"])
 
         # Renumber latest simulation's trial number so it doesn't get overwritten
-        df3 = pd.read_csv(f"results/deg=3_fake_{a}_results.csv")
-        df3.loc[df3["n_trial"] == 1, "n_trial"] = i
-        df3.to_csv(f"results/deg=3_fake_{a}_results.csv", index=False)
+        def update_trial_numbers(deg):
+            csv_name = f"results/new_deg={deg}_fake_{a}_results.csv"
+            df = pd.read_csv(csv_name)
 
-        df4 = pd.read_csv(f"results/deg=4_fake_{a}_results.csv")
-        df4.loc[df4["n_trial"] == 1, "n_trial"] = i
-        df4.to_csv(f"results/deg=4_fake_{a}_results.csv", index=False)
+            # Get existing combinations of sketch_type, k, and the new n_trial value
+            existing_combinations = df[df["n_trial"] == i][["sketch_type", "k"]]
+
+            # Create mask checking both columns aren't already present with new n_trial
+            mask = (df["n_trial"] == 1) & ~df[["sketch_type", "k"]].apply(tuple, axis=1).isin(
+                existing_combinations.apply(tuple, axis=1)
+            )
+            df.loc[mask, "n_trial"] = i
+            df.to_csv(csv_name, index=False)
+
+        update_trial_numbers(3)
+        update_trial_numbers(4)

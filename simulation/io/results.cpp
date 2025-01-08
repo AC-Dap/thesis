@@ -26,7 +26,7 @@ __uint128_t strtouint128 (const std::string &s) {
         if (isdigit(c)) {
             result = result * 10 + (c - '0');
         } else {
-            throw std::invalid_argument ("Invalid character when parsing int.");
+            throw std::domain_error("Invalid character when parsing int (" + std::to_string(c) + ").");
         }
     }
 

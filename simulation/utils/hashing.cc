@@ -40,7 +40,7 @@ SignFun generate_sign_function(mt19937& rng, Dataset& ds) {
 /**
     Generates a random seed for every item in `ds`. The seed is distributed Expo(1).
  */
-SeedFun generate_seed_function(mt19937& rng, Dataset& ds) {
+SeedFun generate_seed_function(mt19937& rng, const Dataset& ds) {
     std::exponential_distribution<> d(1);
     SeedFun hash(ds.item_counts.size());
 

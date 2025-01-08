@@ -21,6 +21,10 @@ double cond_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockO
 
 double alt_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
+double swa_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+double unif_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
 double n_estimate_left(double S, double left, double right);
 
 double n_estimate_right(double S, double left, double right);

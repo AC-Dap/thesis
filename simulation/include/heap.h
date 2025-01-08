@@ -8,7 +8,7 @@ using namespace std;
 
 template<typename T>
 struct Heap {
-    Heap(size_t cap): len(0), cap(cap), heap(cap) {}
+    explicit Heap(size_t cap): len(0), cap(cap), heap(cap) {}
 
     void push(T el);
     T pop();

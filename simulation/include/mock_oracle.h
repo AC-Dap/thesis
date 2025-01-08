@@ -13,7 +13,7 @@ using namespace std;
 struct MockOracle {
     virtual ~MockOracle() = default;
 
-    MockOracle(double ep, Dataset& ds): ep(ep), estimates(ds.item_counts.size(), 0), ds(ds) {}
+    MockOracle(double ep, string name, Dataset& ds): ep(ep), name(name), estimates(ds.item_counts.size(), 0), ds(ds) {}
 
     /**
      * Returns an estimate of an item's frequency, constrained to be in [1/N, 1].
@@ -29,16 +29,15 @@ struct MockOracle {
 
     virtual void reset_estimates(){};
 
-    virtual string name() const = 0;
-
     double ep;
+    string name;
     vector<double> estimates;
 
     Dataset& ds;
 };
 
 struct MockOracleRelativeError final : MockOracle {
-    MockOracleRelativeError(double ep, Dataset& ds): MockOracle(ep, ds) {}
+    MockOracleRelativeError(double ep, string name, Dataset& ds): MockOracle(ep, name, ds) {}
 
     void reset_estimates() override {
         random_device rd;
@@ -52,14 +51,10 @@ struct MockOracleRelativeError final : MockOracle {
             }
         }
     }
-
-    string name() const override {
-        return "rel";
-    }
 };
 
 struct MockOracleAbsoluteError final : MockOracle {
-    MockOracleAbsoluteError(double ep, Dataset& ds): MockOracle(ep, ds) {}
+    MockOracleAbsoluteError(double ep, string name, Dataset& ds): MockOracle(ep, name, ds) {}
 
     void reset_estimates() override {
         random_device rd;
@@ -74,14 +69,10 @@ struct MockOracleAbsoluteError final : MockOracle {
             }
         }
     }
-
-    string name() const override {
-        return "abs";
-    }
 };
 
 struct MockOracleBinomialError final : MockOracle {
-    explicit MockOracleBinomialError(Dataset& ds): MockOracle(0, ds) {}
+    explicit MockOracleBinomialError(string name, Dataset& ds): MockOracle(0, name, ds) {}
 
     void reset_estimates() override {
         random_device rd;
@@ -95,27 +86,16 @@ struct MockOracleBinomialError final : MockOracle {
             }
         }
     }
-
-    string name() const override {
-        return "bin";
-    }
 };
 
 struct ExactOracle final : MockOracle {
-    explicit ExactOracle(Dataset& ds): MockOracle(0, ds){}
+    explicit ExactOracle(string name, Dataset& ds): MockOracle(0, name, ds){}
 
     void reset_estimates() override {
         for(ItemId item = 0; item < estimates.size(); item++) {
             estimates[item] = ds.item_counts[item];
         }
     }
-
-    string name() const override {
-        return "exact";
-    }
 };
-
-template <class T>
-concept IsMockOracle = std::is_base_of<MockOracle, T>::value;
 
 #endif
