@@ -25,10 +25,10 @@ sns.set()
 
 # +
 ### Load data
-df1 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
-df1['Query'] = df1['Query'].fillna("")
-unique_counts1 = df1['Query'].value_counts()
-unique_freqs1 = unique_counts1 / len(df1)
+df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
+df['Query'] = df['Query'].fillna("")
+unique_counts = df['Query'].value_counts()
+unique_freqs = unique_counts / len(df)
 
 df2 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-02.txt', sep='\t')
 df2['Query'] = df2['Query'].fillna("")
@@ -113,7 +113,7 @@ def norm(items, p):
 p = 3
 t = PrettyTable(["Left", "Right", "N", "S", "||x||^p", "n*||x/n||^p"])
 
-k = 256
+k = 1024
 buckets = generate_buckets(7, k)
 filled_buckets = place_in_buckets(buckets, unique_freqs)
 
@@ -125,16 +125,16 @@ for i, items in enumerate(filled_buckets):
     n = len(items)
     S = items.sum()
     
-    nhat = np.round(S / np.sqrt(left * right)) if S > 0 else np.nan
-    pred = (S**p)/(nhat**(p-1)) if S > 0 else np.nan
+    # nhat = np.round(S / np.sqrt(left * right)) if S > 0 else np.nan
+    pred = S * ((left + right)/2)**(p-1) if S > 0 else np.nan
 
     bucket_norms[i] = norm(items, p)
     bucket_preds[i] = pred
     
     t.add_row([left, right, n, S, norm(items, p), pred])
 
-print(np.nan_to_num(bucket_norms).sum(), np.nan_to_num(bucket_preds).sum())
-print(t)
+# print(np.nan_to_num(bucket_norms).sum(), np.nan_to_num(bucket_preds).sum())
+# print(t)
 
 # +
 # Plot loss for each bucket type

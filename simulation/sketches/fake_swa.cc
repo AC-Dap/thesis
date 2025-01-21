@@ -36,7 +36,7 @@ void get_top_items(Heap<tuple<double, ItemId>>& h, const DatasetItemCounts& item
  * This means we can directly generate a sample without needing to simulate the data stream.
  */
 tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
-    size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds) {
+    size_t kh, size_t kp, size_t ku, double threshold, MockOracle& oracle, Dataset& ds) {
 
     // Copy items, since we need to modify it.
     DatasetItemCounts item_counts_copy(ds.item_counts);
@@ -66,14 +66,14 @@ tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
 
     // Get top kp by weighted sample in remaining items
     Heap<tuple<double, ItemId>> top_p(kp + 1);
-    get_top_items(top_p, item_counts_copy, [&](ItemId item) { return oracle.estimate(item) / pow(seed[item], 1./deg); });
+    get_top_items(top_p, item_counts_copy, [&](ItemId item) { return oracle.estimate(item) >= threshold ? 1. / seed[item] : 0; });
 
     auto tau = get<0>(top_p.heap[0]);
     for(int i = 0; i < kp; i++) {
         auto item = get<1>(top_p.heap[1+i]);
         s[kh + i] = item;
         weights[kh + i] = ds.item_counts[item];
-        probs[kh + i] = 1 - exp(-pow(oracle.estimate(item) / tau, deg));
+        probs[kh + i] = 1 - exp(oracle.estimate(item) >= threshold ? -1 / tau : 0);
         item_counts_copy[item] = 0;
     }
 

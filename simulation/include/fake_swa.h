@@ -16,6 +16,6 @@ using namespace std;
  * We pass `items` by value, since we will modify it.
  */
 tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
-    size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds);
+    size_t kh, size_t kp, size_t ku, double threshold, MockOracle& oracle, Dataset& ds);
 
 #endif
