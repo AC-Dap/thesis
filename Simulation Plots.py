@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -69,15 +69,14 @@ plt.plot(unique_counts / len(df), oracle_guesses / len(df))
 # %%
 sim_folder = "simulation/results"
 
-deg3_results = pd.read_csv(f"{sim_folder}/new_deg=3_fake_0.5_results.csv")
-deg4_results = pd.read_csv(f"{sim_folder}/new_deg=4_fake_0.5_results.csv")
-# deg3_results = pd.read_csv(f"{sim_folder}/deg=3/deg=3_aol_results.csv")
-# deg4_results = pd.read_csv(f"{sim_folder}/deg=4/deg=4_aol_results.csv")
+threshold_aol = pd.read_csv(f"{sim_folder}/threshold_aol_results.csv")
+threshold_fake_0_1 = pd.read_csv(f"{sim_folder}/threshold_fake_0.1_results.csv")
+threshold_fake_0_3 = pd.read_csv(f"{sim_folder}/threshold_fake_0.3_results.csv")
+threshold_fake_0_5 = pd.read_csv(f"{sim_folder}/threshold_fake_0.5_results.csv")
 
 nsims = 30
-sample_sizes = [2**i for i in range(6, 17)]
-def read_sim_data(deg, sketch_type, sample_sizes):
-    df = deg3_results if deg == 3 else deg4_results
+sample_sizes = [2**i for i in range(6, 13)]
+def read_sim_data(df, sketch_type, sample_sizes):
     estimates = []
     exacts = []
     for k in sample_sizes:
@@ -90,10 +89,10 @@ def nth(deg):
     return "3rd" if deg == 3 else f"{deg}th"
 
 def error_prefix(err):
-    if err == "relative": return "rel"
-    if err == "absolute": return "abs"
-    if err == "binomial": return "bin"
-    if err == "test": return "test"
+    if err == "rel_0.05": return "relative"
+    if err == "abs_0.001": return "absolute"
+    if err == "train": return "train/test"
+    if err == "exact": return "no"
 
 
 # %%
@@ -116,11 +115,170 @@ def plot_abs_curve(ax, x, results, true_value, label, color):
     ax.fill_between(x, mean, upper, color=color, alpha=0.2)
     ax.legend()
 
-def plot_mse(ax, x, results, true_value, label, color, linestyle='solid'):
+def plot_mse(ax, x, results, true_value, label):
     mse = np.sqrt(np.mean(((results - true_value) / true_value)**2, axis=1))
     
-    ax.plot(x, mse, label=label, color=color, linestyle=linestyle)
-    ax.legend()
+    ax.plot(x, mse, label=label)
+
+
+# %%
+# Plot NRMSE error for SWA, per oracle error type
+
+def plot_swa_nrmse(df, df_name, df_prefix):
+    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    
+    for i, error_type in enumerate(error_types):
+        swa_1_results, swa_1_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k_ku=0", sample_sizes)
+        swa_2_results, swa_2_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
+        swa_3_results, swa_3_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k/2_ku=k/2", sample_sizes)
+        
+        plot_mse(ax[i], sample_sizes, swa_1_results, swa_1_exacts, "$k_h = 0, k_p = k, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa_2_results, swa_2_exacts, "$k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa_3_results, swa_3_exacts, "$k_h = 0, k_p = \\frac{k}{2}, k_u = \\frac{k}{2}$")
+
+        error_name = error_prefix(error_type)
+        ax[i].set_title(f'{error_name} error')
+    
+    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'Threshold Count NRMSE vs. Sample Size on {df_name} data, SWA Sketch')
+
+    fig.legend(*ax[2].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+    
+    plt.savefig(f'figs/threshold_swa_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_swa_nrmse(threshold_aol, 'AOL', 'aol')
+plot_swa_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_swa_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_swa_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
+
+# %%
+# Plot estimation error for buckets, per oracle error type
+
+def plot_bucket_nrmse(df, df_name, df_prefix):
+    fig, ax = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    bucket_types = ["linear", "expo"]
+
+    for i, bucket_type in enumerate(bucket_types):
+        for j, error_type in enumerate(error_types):
+            # bucket_expo_harm1_results, bucket_expo_harm1_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k_kh=0", sample_sizes)
+            # bucket_expo_harm2_results, bucket_expo_harm2_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+
+            bucket_expo_alt1_results, bucket_expo_alt1_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k_kh=0", sample_sizes)
+            bucket_expo_alt2_results, bucket_expo_alt2_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
+
+            bucket_expo_smart1_results, bucket_expo_smart1_exacts = read_sim_data(df, f"smart_a_expo_arith_{error_type}_k=k/2_kh=k/2", sample_sizes)
+            bucket_expo_smart2_results, bucket_expo_smart2_exacts = read_sim_data(df, f"smart_b_expo_arith_{error_type}_k=k/2_kh=k/2", sample_sizes)
+
+            # bucket_expo_swa_results, bucket_expo_swa_exacts = read_sim_data(df, f"swa_bucket_{bucket_type}_{error_type}_k=sqrt(k)_kp=sqrt(k)_kh=0", sample_sizes)
+            # bucket_expo_unif_results, bucket_expo_unif_exacts = read_sim_data(df, f"unif_bucket_{bucket_type}_{error_type}_k=sqrt(k)_ku=sqrt(k)_kh=0", sample_sizes)
+            
+            # bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
+
+            # plot_mse(ax[i][j], sample_sizes, bucket_expo_harm1_results, bucket_expo_harm1_exacts, "Avg: $B = k, k_h = 0$", 'b')
+            # plot_mse(ax[i][j], sample_sizes, bucket_expo_harm2_results, bucket_expo_harm2_exacts, "Avg: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'r')
+
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt1_results, bucket_expo_alt1_exacts, "Alt: $B = k, k_h = 0$")
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt2_results, bucket_expo_alt2_exacts, "Alt: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_smart1_results, bucket_expo_smart1_exacts, "Smart A: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_smart2_results, bucket_expo_smart2_exacts, "Smart B: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+            # plot_mse(ax[i][j], sample_sizes, bucket_expo_swa_results, bucket_expo_swa_exacts, "SWA: $B = \\sqrt{k}, k_h = \\sqrt{k}$", 'pink')
+            # plot_mse(ax[i][j], sample_sizes, bucket_expo_unif_results, bucket_expo_unif_exacts, "Unif: $B = \\sqrt{k}, k_h = \\sqrt{k}$", 'orange')
+
+            # plot_mse(ax[i][j], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Unbiased: $k_h = k$", 'pink')
+    
+            error_name = error_prefix(error_type)
+            bucket_name = "Linear" if bucket_type == "linear" else "Exponential"
+            ax[i][j].set_title(f'{bucket_name} bucket, {error_name} error')
+    
+    ax[0][0].set_xscale('log')
+    ax[0][0].set_yscale('log')
+
+    ax[1][0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1][1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1][2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'Threshold Count NRMSE vs. Sample Size on {df_name} data, Bucketing Sketches')
+    
+    fig.legend(*ax[0][0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+    
+    plt.savefig(f'figs/threshold_bucket_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_bucket_nrmse(threshold_aol, 'AOL', 'aol')
+# plot_bucket_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+# plot_bucket_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+# plot_bucket_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
+# %%
+# Plot NRMSE error comparing both sketches, per oracle error type
+
+def plot_both_nrmse(df, df_name, df_prefix):
+    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    
+    for i, error_type in enumerate(error_types):
+        swa1_results, swa1_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
+        swa2_results, swa2_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k/2_ku=k/2", sample_sizes)
+        # bucket_expo_harm_results, bucket_expo_harm_exacts = read_sim_data(df, f"bucket_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+        bucket_expo_alt1_results, bucket_expo_alt1_exacts = read_sim_data(df, f"bucket_expo_alt_{error_type}_k=k_kh=0", sample_sizes)
+        bucket_expo_alt2_results, bucket_expo_alt2_exacts = read_sim_data(df, f"bucket_expo_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
+        # bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
+        
+        plot_mse(ax[i], sample_sizes, swa1_results, swa1_exacts, "SWA: $k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa2_results, swa2_exacts, "SWA: $k_h = 0, k_p = \\frac{k}{2}, k_u = \\frac{k}{2}$")
+        # plot_mse(ax[i], sample_sizes, bucket_expo_harm_results, bucket_expo_harm_exacts, "Exponential Bucket Avg:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'g')
+        plot_mse(ax[i], sample_sizes, bucket_expo_alt1_results, bucket_expo_alt1_exacts, "Exponential Bucket Alt:\n$B = k, k_h = 0$")
+        plot_mse(ax[i], sample_sizes, bucket_expo_alt2_results, bucket_expo_alt2_exacts, "Exponential Bucket Alt:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+        # plot_mse(ax[i], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Bucket Unbiased: $k_h = k$", 'pink')
+
+        error_name = error_prefix(error_type)
+        ax[i].set_title(f'{error_name} error')
+    
+    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'Threshold Count NRMSE vs. Sample Size on {df_name} data, Comparing Sketches')
+
+    fig.legend(*ax[2].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+    
+    plt.savefig(f'figs/threshold_both_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_both_nrmse(threshold_aol, 'AOL', 'aol')
+plot_both_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_both_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_both_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
 
 
 # %%
@@ -716,6 +874,7 @@ sim_folder = "simulation/results"
 a = 0.5
 # threshold_results = pd.read_csv(f"{sim_folder}/threshold_fake_{a}_results.csv")
 threshold_results = pd.read_csv(f"{sim_folder}/threshold_aol_results.csv")
+
 
 sample_sizes = [2**i for i in range(6, 13)]
 def read_threshold_sim_data(sketch_type, sample_sizes):
