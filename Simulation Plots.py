@@ -132,12 +132,169 @@ def plot_abs_curve(ax, x, results, true_value, label, color):
     ax.fill_between(x, mean, upper, color=color, alpha=0.2)
     ax.legend()
 
-def plot_mse(ax, x, results, true_value, label, color, linestyle='solid'):
+def plot_mse(ax, x, results, true_value, label):
     mse = np.sqrt(np.mean(((results - true_value) / true_value)**2, axis=1))
     
-    ax.plot(x, mse, label=label, color=color, linestyle=linestyle)
-    ax.legend()
+    ax.plot(x, mse, label=label)
 
+# %%
+# Plot NRMSE error for SWA, per oracle error type
+
+def plot_swa_nrmse(deg, df, df_name, df_prefix):
+    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    
+    for i, error_type in enumerate(error_types):
+        swa_1_results, swa_1_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k_ku=0", sample_sizes)
+        swa_2_results, swa_2_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
+        swa_3_results, swa_3_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k/2_ku=k/2", sample_sizes)
+        
+        plot_mse(ax[i], sample_sizes, swa_1_results, swa_1_exacts, "$k_h = 0, k_p = k, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa_2_results, swa_2_exacts, "$k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa_3_results, swa_3_exacts, "$k_h = 0, k_p = \\frac{k}{2}, k_u = \\frac{k}{2}$")
+
+        error_name = error_prefix(error_type)
+        ax[i].set_title(f'{error_name} error')
+    
+    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, SWA Sketch')
+
+    fig.legend(*ax[2].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+    
+    plt.savefig(f'figs/freq_{deg}_moment_swa_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_swa_nrmse(3, deg3_aol, 'AOL', 'aol')
+plot_swa_nrmse(4, deg4_aol, 'AOL', 'aol')
+plot_swa_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_swa_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_swa_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_swa_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_swa_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+plot_swa_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
+
+# %%
+# Plot estimation error for buckets, per oracle error type
+
+def plot_bucket_nrmse(deg, df, df_name, df_prefix):
+    fig, ax = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    bucket_types = ["linear", "expo"]
+
+    for i, bucket_type in enumerate(bucket_types):
+        for j, error_type in enumerate(error_types):
+            bucket_expo_harm1_results, bucket_expo_harm1_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k_kh=0", sample_sizes)
+            bucket_expo_harm2_results, bucket_expo_harm2_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+
+            bucket_expo_alt1_results, bucket_expo_alt1_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k_kh=0", sample_sizes)
+            bucket_expo_alt2_results, bucket_expo_alt2_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
+
+            bucket_expo_smarta_results, bucket_expo_smarta_exacts = read_sim_data(df, f"smart_a_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+            bucket_expo_smartb_results, bucket_expo_smartb_exacts = read_sim_data(df, f"smart_b_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+            
+            bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
+
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_harm1_results, bucket_expo_harm1_exacts, "Avg: $B = k, k_h = 0$")
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_harm2_results, bucket_expo_harm2_exacts, "Avg: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt1_results, bucket_expo_alt1_exacts, "Alt: $B = k, k_h = 0$")
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt2_results, bucket_expo_alt2_exacts, "Alt: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_smarta_results, bucket_expo_smarta_exacts, "Smart A: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+            plot_mse(ax[i][j], sample_sizes, bucket_expo_smartb_results, bucket_expo_smartb_exacts, "Smart B: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+            plot_mse(ax[i][j], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Unbiased: $k_h = k$")
+    
+            error_name = error_prefix(error_type)
+            bucket_name = "Linear" if bucket_type == "linear" else "Exponential"
+            ax[i][j].set_title(f'{bucket_name} bucket, {error_name} error')
+    
+    ax[0][0].set_xscale('log')
+    ax[0][0].set_yscale('log')
+
+    ax[1][0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1][1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1][2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, Bucketing Sketches')
+    
+    fig.legend(*ax[0][0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+    
+    plt.savefig(f'figs/freq_{deg}_moment_bucket_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_bucket_nrmse(3, deg3_aol, 'AOL', 'aol')
+plot_bucket_nrmse(4, deg4_aol, 'AOL', 'aol')
+plot_bucket_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_bucket_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_bucket_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_bucket_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_bucket_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+plot_bucket_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
+# %%
+# Plot NRMSE error comparing both sketches, per oracle error type
+
+def plot_both_nrmse(deg, df, df_name, df_prefix):
+    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+    
+    for i, error_type in enumerate(error_types):
+        swa_results, swa_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
+        bucket_expo_harm_results, bucket_expo_harm_exacts = read_sim_data(df, f"bucket_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+        bucket_expo_alt_results, bucket_expo_alt_exacts = read_sim_data(df, f"bucket_expo_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
+        bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
+        
+        plot_mse(ax[i], sample_sizes, swa_results, swa_exacts, "SWA: $k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, bucket_expo_harm_results, bucket_expo_harm_exacts, "Exponential Bucket Avg:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+        plot_mse(ax[i], sample_sizes, bucket_expo_alt_results, bucket_expo_alt_exacts, "Exponential Bucket Alt:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+        plot_mse(ax[i], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Bucket Unbiased: $k_h = k$")
+
+        error_name = error_prefix(error_type)
+        ax[i].set_title(f'{error_name} error')
+    
+    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
+    
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    
+    fig.supxlabel('Sample size', y=-0.1)
+    fig.supylabel('Normalized Root MSE')
+
+    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, Comparing Sketches')
+    
+    plt.savefig(f'figs/freq_{deg}_moment_both_{df_prefix}_nrmse', bbox_inches='tight')
+    plt.show()
+
+plot_both_nrmse(3, deg3_aol, 'AOL', 'aol')
+plot_both_nrmse(4, deg4_aol, 'AOL', 'aol')
+plot_both_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_both_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+plot_both_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_both_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+plot_both_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+plot_both_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
 
 # %%
 # Plot absolute estimation error vs. sample size
@@ -669,171 +826,3 @@ def plot_bucketing_kh_sketches(deg):
 
 plot_bucketing_kh_sketches(3)
 # plot_bucketing_kh_sketches(4)
-
-# %%
-# Plot NRMSE error for SWA, per oracle error type
-
-def plot_swa_nrmse(deg, df, df_name, df_prefix):
-    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
-    error_types = ["rel_0.05", "abs_0.001", "train"]
-    
-    for i, error_type in enumerate(error_types):
-        swa_1_results, swa_1_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k_ku=0", sample_sizes)
-        swa_2_results, swa_2_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
-        swa_3_results, swa_3_exacts = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k/2_ku=k/2", sample_sizes)
-        
-        plot_mse(ax[i], sample_sizes, swa_1_results, swa_1_exacts, "$k_h = 0, k_p = k, k_u = 0$", 'b')
-        plot_mse(ax[i], sample_sizes, swa_2_results, swa_2_exacts, "$k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$", 'r')
-        plot_mse(ax[i], sample_sizes, swa_3_results, swa_3_exacts, "$k_h = 0, k_p = \\frac{k}{2}, k_u = \\frac{k}{2}$", 'g')
-
-        error_name = error_prefix(error_type)
-        ax[i].set_title(f'{error_name} error')
-    
-    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-    
-    ax[0].set_xscale('log')
-    ax[0].set_yscale('log')
-
-    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    
-    fig.supxlabel('Sample size', y=-0.1)
-    fig.supylabel('Normalized Root MSE')
-
-    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, SWA Sketch')
-
-    fig.legend(*ax[2].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
-    ax[0].get_legend().remove()
-    ax[1].get_legend().remove()
-    ax[2].get_legend().remove()
-    
-    plt.savefig(f'figs/freq_{deg}_moment_swa_{df_prefix}_nrmse', bbox_inches='tight')
-    plt.show()
-
-plot_swa_nrmse(3, deg3_aol, 'AOL', 'aol')
-plot_swa_nrmse(4, deg4_aol, 'AOL', 'aol')
-plot_swa_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_swa_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_swa_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_swa_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_swa_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-plot_swa_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-
-
-# %%
-# Plot estimation error for buckets, per oracle error type
-
-def plot_bucket_nrmse(deg, df, df_name, df_prefix):
-    fig, ax = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(15, 5))
-    error_types = ["rel_0.05", "abs_0.001", "train"]
-    bucket_types = ["linear", "expo"]
-
-    for i, bucket_type in enumerate(bucket_types):
-        for j, error_type in enumerate(error_types):
-            bucket_expo_harm1_results, bucket_expo_harm1_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k_kh=0", sample_sizes)
-            bucket_expo_harm2_results, bucket_expo_harm2_exacts = read_sim_data(df, f"bucket_{bucket_type}_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
-
-            bucket_expo_alt1_results, bucket_expo_alt1_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k_kh=0", sample_sizes)
-            bucket_expo_alt2_results, bucket_expo_alt2_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
-            
-            bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
-
-            plot_mse(ax[i][j], sample_sizes, bucket_expo_harm1_results, bucket_expo_harm1_exacts, "Avg: $B = k, k_h = 0$", 'b')
-            plot_mse(ax[i][j], sample_sizes, bucket_expo_harm2_results, bucket_expo_harm2_exacts, "Avg: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'r')
-
-            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt1_results, bucket_expo_alt1_exacts, "Alt: $B = k, k_h = 0$", 'g')
-            plot_mse(ax[i][j], sample_sizes, bucket_expo_alt2_results, bucket_expo_alt2_exacts, "Alt: $B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'y')
-
-            plot_mse(ax[i][j], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Unbiased: $k_h = k$", 'pink')
-    
-            error_name = error_prefix(error_type)
-            bucket_name = "Linear" if bucket_type == "linear" else "Exponential"
-            ax[i][j].set_title(f'{bucket_name} bucket, {error_name} error')
-    
-    ax[0][0].set_xscale('log')
-    ax[0][0].set_yscale('log')
-
-    ax[1][0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[1][1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[1][2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    
-    fig.supxlabel('Sample size', y=-0.1)
-    fig.supylabel('Normalized Root MSE')
-
-    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, Bucketing Sketches')
-    
-    fig.legend(*ax[0][0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
-    ax[0][0].get_legend().remove()
-    ax[0][1].get_legend().remove()
-    ax[0][2].get_legend().remove()
-    ax[1][0].get_legend().remove()
-    ax[1][1].get_legend().remove()
-    ax[1][2].get_legend().remove()
-    
-    plt.savefig(f'figs/freq_{deg}_moment_bucket_{df_prefix}_nrmse', bbox_inches='tight')
-    plt.show()
-
-plot_bucket_nrmse(3, deg3_aol, 'AOL', 'aol')
-plot_bucket_nrmse(4, deg4_aol, 'AOL', 'aol')
-plot_bucket_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_bucket_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_bucket_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_bucket_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_bucket_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-plot_bucket_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-
-
-# %%
-# Plot NRMSE error comparing both sketches, per oracle error type
-
-def plot_both_nrmse(deg, df, df_name, df_prefix):
-    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
-    error_types = ["rel_0.05", "abs_0.001", "train"]
-    
-    for i, error_type in enumerate(error_types):
-        swa_results, swa_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
-        bucket_expo_harm_results, bucket_expo_harm_exacts = read_sim_data(df, f"bucket_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
-        bucket_expo_alt_results, bucket_expo_alt_exacts = read_sim_data(df, f"bucket_expo_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
-        bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
-        
-        plot_mse(ax[i], sample_sizes, swa_results, swa_exacts, "SWA: $k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$", 'r')
-        plot_mse(ax[i], sample_sizes, bucket_expo_harm_results, bucket_expo_harm_exacts, "Exponential Bucket Avg:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'g')
-        plot_mse(ax[i], sample_sizes, bucket_expo_alt_results, bucket_expo_alt_exacts, "Exponential Bucket Alt:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$", 'b')
-        plot_mse(ax[i], sample_sizes, bucket_cond_results, bucket_cond_exacts, "Bucket Unbiased: $k_h = k$", 'pink')
-
-        error_name = error_prefix(error_type)
-        ax[i].set_title(f'{error_name} error')
-    
-    # ax[0].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-    # ax[1].axhline(actual_value, label="L2 Norm", c='black', linestyle='dashed')
-    
-    ax[0].set_xscale('log')
-    ax[0].set_yscale('log')
-
-    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
-    
-    fig.supxlabel('Sample size', y=-0.1)
-    fig.supylabel('Normalized Root MSE')
-
-    fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, Comparing Sketches')
-
-    fig.legend(*ax[2].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
-    ax[0].get_legend().remove()
-    ax[1].get_legend().remove()
-    ax[2].get_legend().remove()
-    
-    plt.savefig(f'figs/freq_{deg}_moment_both_{df_prefix}_nrmse', bbox_inches='tight')
-    plt.show()
-
-plot_both_nrmse(3, deg3_aol, 'AOL', 'aol')
-plot_both_nrmse(4, deg4_aol, 'AOL', 'aol')
-plot_both_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_both_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_both_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_both_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_both_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-plot_both_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')

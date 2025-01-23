@@ -234,6 +234,61 @@ int main(int argc, const char** argv) {
             }
         }
 
+        // Smart bucket estimators
+        for (auto &[n_estimate, estimate_name]: n_estimates) {
+            for (auto* o: os) {
+                // k/2 k/2 A
+                run_sims(
+                    results, ks, total_trials,
+                    format("smart_a_expo_{}_{}_k=k/2_kh=k/2", estimate_name, o->name),
+                    [&](size_t k, size_t n_trials) {
+                        auto buckets = [&] {
+                            return generate_exponential_buckets(min_freq, k);
+                        };
+
+                        auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                            return smart_a_bucket_sketch(k / 2, deg, n_estimate, b, o, ds);
+                        };
+
+                        return run_n_bucket_sims(
+                            buckets,
+                            sketch,
+                            n_trials,
+                            *o,
+                            ds_test
+                        );
+                    },
+                    exact_moment,
+                    mode
+                );
+
+                // k/2 k/2 B
+                run_sims(
+                    results, ks, total_trials,
+                    format("smart_b_expo_{}_{}_k=k/2_kh=k/2", estimate_name, o->name),
+                    [&](size_t k, size_t n_trials) {
+                        auto buckets = [&] {
+                            return generate_exponential_buckets(min_freq, k);
+                        };
+
+                        auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                            return smart_b_bucket_sketch(k / 2, deg, n_estimate, b, o, ds);
+                        };
+
+                        return run_n_bucket_sims(
+                            buckets,
+                            sketch,
+                            n_trials,
+                            *o,
+                            ds_test
+                        );
+                    },
+                    exact_moment,
+                    mode
+                );
+            }
+        }
+
 
         // Alt bucket estimator
         for (auto &[bucket_gen, bucket_name]: bucket_types) {

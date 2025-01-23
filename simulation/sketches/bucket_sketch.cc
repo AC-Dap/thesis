@@ -82,6 +82,100 @@ double bucket_sketch(const size_t k_hh, const size_t deg, const function<double(
     return estimate;
 }
 
+double smart_a_bucket_sketch(const size_t k_hh, const size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
+    vector<size_t> bucket_counts(buckets.size() - 1, 0);
+    vector<pair<double, size_t>> bucket_min(buckets.size() - 1, {1, 0});
+    vector<pair<double, size_t>> bucket_max(buckets.size() - 1, {0, 0});
+
+    size_t N = ds.lines.size();
+
+    // Take out the top k_hh items
+    Heap<tuple<double, ItemId>> top_h(k_hh);
+
+    // Process items
+    process_ds_to_buckets([&](ItemId item) {
+        auto freq_est = o.estimate(item);
+        auto S = ds.item_counts[item];
+
+        size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
+        bucket_counts[bucket_i - 1] += S;
+        if (freq_est < bucket_min[bucket_i - 1].first) {
+            bucket_min[bucket_i - 1].first = freq_est;
+            bucket_min[bucket_i - 1].second = S;
+        }
+        if (freq_est > bucket_max[bucket_i].first) {
+            bucket_max[bucket_i].first = freq_est;
+            bucket_max[bucket_i].second = S;
+        }
+    }, top_h, o, ds);
+
+    // Get prediction of each bucket
+    long double estimate = 0;
+    for (size_t i = 0; i < bucket_counts.size(); i++) {
+        if (bucket_counts[i] == 0) continue;
+
+        double S = bucket_counts[i];
+        double left = bucket_min[i].second, right = bucket_max[i].second;
+        double n_est = max(1., n_estimate(S, left, right));
+
+        estimate += exp(deg * log(S) - (deg-1) * log(n_est));
+    }
+
+    // Add top_hh
+    for (int i = 0; i < top_h.len; i++) {
+        estimate += pow(ds.item_counts.at(get<1>(top_h.heap[i])), deg);
+    }
+
+    return estimate;
+}
+
+double smart_b_bucket_sketch(const size_t k_hh, const size_t deg, const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
+    vector<size_t> bucket_counts(buckets.size() - 1, 0);
+    vector<pair<double, size_t>> bucket_min(buckets.size() - 1, {1, 0});
+    vector<pair<double, size_t>> bucket_max(buckets.size() - 1, {0, 0});
+
+    size_t N = ds.lines.size();
+
+    // Take out the top k_hh items
+    Heap<tuple<double, ItemId>> top_h(k_hh);
+
+    // Process items
+    process_ds_to_buckets([&](ItemId item) {
+        auto freq_est = o.estimate(item);
+        auto S = ds.item_counts[item];
+
+        size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
+        bucket_counts[bucket_i - 1] += S;
+        if (freq_est < bucket_min[bucket_i - 1].first) {
+            bucket_min[bucket_i - 1].first = freq_est;
+            bucket_min[bucket_i - 1].second = S;
+        }
+        if (freq_est > bucket_max[bucket_i].first) {
+            bucket_max[bucket_i].first = freq_est;
+            bucket_max[bucket_i].second = S;
+        }
+    }, top_h, o, ds);
+
+    // Get prediction of each bucket
+    long double estimate = 0;
+    for (size_t i = 0; i < bucket_counts.size(); i++) {
+        if (bucket_counts[i] == 0) continue;
+
+        double S = bucket_counts[i];
+        double left = N * bucket_min[i].first, right = N * bucket_max[i].first;
+        double n_est = max(1., n_estimate(S, left, right));
+
+        estimate += exp(deg * log(S) - (deg-1) * log(n_est));
+    }
+
+    // Add top_hh
+    for (int i = 0; i < top_h.len; i++) {
+        estimate += pow(ds.item_counts.at(get<1>(top_h.heap[i])), deg);
+    }
+
+    return estimate;
+}
+
 double cond_bucket_sketch(const size_t k_hh, const size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
     vector<size_t> bucket_counts(buckets.size() - 1, 0);
     vector<long double> bucket_p(buckets.size() - 1, 0);
