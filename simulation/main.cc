@@ -233,6 +233,60 @@ int main(int argc, const char** argv) {
         }
     }
 
+    // Smart bucket estimators
+    for (auto* o: os) {
+        auto& n_estimate = n_estimate_arith_avg;
+
+        // k/2 k/2, a
+        run_sims(
+            results, ks, total_trials,
+            format("smart_a_expo_arith_{}_k=k/2_kh=k/2", o->name),
+            [&](size_t k, size_t n_trials) {
+                auto buckets = [&] {
+                    return generate_exponential_buckets(min_freq, k / 2);
+                };
+
+                auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                    return smart_a_bucket_sketch(k / 2, threshold, n_estimate, b, o, ds);
+                };
+
+                return run_n_bucket_sims(
+                    buckets,
+                    sketch,
+                    n_trials,
+                    *o,
+                    ds_test
+                );
+            },
+            exact_threshold,
+            mode
+        );
+
+        // k/2 k/2, b
+        run_sims(
+            results, ks, total_trials,
+            format("smart_b_expo_arith_{}_k=k/2_kh=k/2", o->name),
+            [&](size_t k, size_t n_trials) {
+                auto buckets = [&] {
+                    return generate_exponential_buckets(min_freq, k / 2);
+                };
+
+                auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                    return smart_b_bucket_sketch(k / 2, threshold, n_estimate, b, o, ds);
+                };
+
+                return run_n_bucket_sims(
+                    buckets,
+                    sketch,
+                    n_trials,
+                    *o,
+                    ds_test
+                );
+            },
+            exact_threshold,
+            mode
+        );
+    }
 
     // Alt bucket estimator
     for (auto &[bucket_gen, bucket_name]: bucket_types) {
