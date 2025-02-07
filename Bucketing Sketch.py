@@ -25,47 +25,34 @@ sns.set()
 
 # +
 ### Load data
-df1 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
-df1['Query'] = df1['Query'].fillna("")
-unique_counts1 = df1['Query'].value_counts()
-unique_freqs1 = unique_counts1 / len(df1)
+df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
+df['Query'] = df['Query'].fillna("")
+unique_counts = df['Query'].value_counts()
+unique_freqs = unique_counts / len(df)
 
 df2 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-02.txt', sep='\t')
 df2['Query'] = df2['Query'].fillna("")
 unique_counts2 = df2['Query'].value_counts()
 unique_freqs2 = unique_counts2 / len(df2)
-# -
 
+
+# +
 # print(df.head())
 # print(unique_counts.head(), len(unique_counts))
 # print(unique_freqs.head())
-print(unique_counts1[~unique_counts1.index.isin(unique_counts2.index)])
+# print(unique_counts1[~unique_counts1.index.isin(unique_counts2.index)])
 
 # +
-for k in range(16):
-    # plt.axhline(10 ** (-7*k/16), c='r', linestyle='--')
-    plt.axhline(k/2048, c='g', linestyle='--')
-
-plt.plot(np.arange(len(unique_counts1)), unique_freqs1, c='b')
-plt.plot(np.arange(len(unique_counts2)), unique_freqs2, c='r')
-
-
-plt.xlabel('Rank')
-plt.ylabel('Frequency')
-plt.xscale('log')
-plt.yscale('log')
-plt.title('Rank vs. Frequency of search results')
-
-
-# -
-
 # Generate Buckets
-def generate_buckets(min_freq, k):
+def expo_buckets(min_freq, k):
     step_size = min_freq / k
     buckets = np.arange(k) * -step_size
     buckets = 10 ** buckets
     buckets = np.append(buckets, 0)
     return buckets[::-1]
+
+def lin_buckets(k):
+    return np.arange(k+1) / k
 
 
 # +
@@ -80,75 +67,200 @@ def plot_buckets(buckets):
     plt.xscale('log')
     plt.yscale('log')
     plt.title('Rank vs. Frequency of search results')
+    plt.show()
 
-plot_buckets(generate_buckets(7, 32))
+plot_buckets(expo_buckets(7, 32))
+plot_buckets(lin_buckets(32))
 
 
 # +
 # Place each item into a bucket
 def find_bucket_index(buckets, value):
+    if value == 0:
+        return 0
     return np.searchsorted(buckets, value, side='left') - 1
 
 def place_in_buckets(buckets, est_freqs):
     k = len(buckets) - 1
     filled_buckets = [[] for _ in range(k)]
-    for item, freq in est_freqs.items():
-        filled_buckets[find_bucket_index(buckets, freq)].append(unique_counts[item])
+
+    sorted_freqs = est_freqs.sort_values(ascending=True)
+    curr_bucket = 0
+    for item, freq in sorted_freqs.items():
+        while buckets[curr_bucket + 1] < freq:
+            curr_bucket += 1
+        filled_buckets[curr_bucket].append(unique_counts[item])
+    
     for i in range(k):
         filled_buckets[i] = np.array(filled_buckets[i])
     return filled_buckets
 
 
-# -
-
+# +
 # Helper Functions
-def norm(items, p):
-    if len(items) == 0:
-        return np.nan
+rng = np.random.default_rng()
+
+def rel_oracle_est(freqs, ep):
+    oracle_freqs = freqs.copy()
+    err = rng.uniform(1-ep, 1+ep, len(freqs))
+    i = 0
+    for item, freq in oracle_freqs.items():
+        oracle_freqs[item] = min(1, max(0, err[i] * freq))
+        i += 1
+    return oracle_freqs
+
+def abs_oracle_est(freqs, ep):
+    oracle_freqs = freqs.copy()
+    err = rng.uniform(-ep, ep, len(freqs))
+    i = 0
+    for item, freq in oracle_freqs.items():
+        oracle_freqs[item] = min(1, max(0, err[i] + freq))
+        i += 1
+    return oracle_freqs
+
+def train_oracle_est(freqs, train_freqs):
+    oracle_freqs = freqs.copy()
+    missing = np.min(train_freqs)
+    for item, freq in oracle_freqs.items():
+        if item in train_freqs:
+            oracle_freqs[item] = train_freqs[item]
+        else:
+            oracle_freqs[item] = missing
+    return oracle_freqs
+
+def n_estimate_harm_avg(S, left, right):
+    return max(1, np.round(2 * S / (left + right)))
+
+
+
+
+# +
+def generate_bucket_stats(buckets, freqs, p):
+    k = len(buckets) - 1
+    filled_buckets = place_in_buckets(buckets, freqs)
+
+    bucket_stats = []
     
-    return np.sum(items ** p)
+    for i, items in enumerate(filled_buckets):
+        if len(items) == 0:
+            bucket_stats.append(None)
+            continue
+        left, right = buckets[i] * len(df), buckets[i+1] * len(df)
+        S = items.sum()
+
+        nest = n_estimate_harm_avg(S, left, right)
+        pred = nest * (S / nest) ** p
+
+        bucket_stats.append((len(items), nest, np.sum(items ** p), pred))
+    return bucket_stats
+
+def print_bucket_stats(buckets, freqs, p, print_table=True):
+    t = PrettyTable(["Left", "Right", "n", "nest", "||x||^p", "n*||x/n||^p", "diff"])
+    k = len(buckets) - 1
+    
+    bucket_stats = generate_bucket_stats(buckets, freqs, p)
+    
+    actual_norm, pred_norm = 0, 0
+    for i in range(k):
+        if bucket_stats[i] == None:
+            continue
+        
+        left, right = buckets[i] * len(df), buckets[i+1] * len(df)
+        n, nest, norm, pred = bucket_stats[i]
+        t.add_row([left, right, n, nest, norm, pred, norm-pred])
+    
+        actual_norm += norm
+        pred_norm += pred
+    
+    print(actual_norm, pred_norm)
+    if print_table:
+        print(t)
+    
+    # Plot loss for each bucket type
+    bucket_errors_abs = [stats[2] - stats[3] if stats is not None else np.nan for stats in bucket_stats]
+    bucket_errors_rel = [bucket_errors_abs[i] / stats[2] if stats is not None else np.nan for i, stats in enumerate(bucket_stats)]
+    
+    plt.scatter(np.arange(k), bucket_errors_abs)
+    plt.show()
+    
+    plt.scatter(np.arange(k), bucket_errors_rel)
+    plt.show()
 
 
 # +
 p = 3
-t = PrettyTable(["Left", "Right", "N", "S", "||x||^p", "n*||x/n||^p"])
+k = 1024
+buckets = expo_buckets(7, k)
 
-k = 256
-buckets = generate_buckets(7, k)
-filled_buckets = place_in_buckets(buckets, unique_freqs)
-
-bucket_norms = np.empty(k)
-bucket_preds = np.empty(k)
-
-for i, items in enumerate(filled_buckets):
-    left, right = buckets[i] * len(df), buckets[i+1] * len(df)
-    n = len(items)
-    S = items.sum()
-    
-    nhat = np.round(S / np.sqrt(left * right)) if S > 0 else np.nan
-    pred = (S**p)/(nhat**(p-1)) if S > 0 else np.nan
-
-    bucket_norms[i] = norm(items, p)
-    bucket_preds[i] = pred
-    
-    t.add_row([left, right, n, S, norm(items, p), pred])
-
-print(np.nan_to_num(bucket_norms).sum(), np.nan_to_num(bucket_preds).sum())
-print(t)
+print_bucket_stats(buckets, rel_oracle_est(unique_freqs, 0.05), p)
 
 # +
-# Plot loss for each bucket type
-bucket_errors_abs = bucket_norms - bucket_preds
-bucket_errors_rel = bucket_errors_abs / bucket_norms
+p = 3
+k = 1024
+buckets = expo_buckets(7, k)
 
-plt.scatter(np.arange(k)[bucket_errors_abs != np.nan], bucket_errors_abs[bucket_errors_abs != np.nan])
-plt.show()
+print_bucket_stats(buckets, abs_oracle_est(unique_freqs, 0.001), p)
 
-plt.scatter(np.arange(k)[bucket_errors_rel != np.nan], bucket_errors_rel[bucket_errors_rel != np.nan])
-plt.show()
+# +
+p = 3
+k = 1024
+buckets = expo_buckets(7, k)
+
+print_bucket_stats(buckets, train_oracle_est(unique_freqs, unique_freqs2), p)
 
 
 # -
+
+# Bucket w/ maximum error
+def max_error_buckets(freqs, oracle_est, ep, p):
+    # Sort freqs
+    oracle_est = oracle_est.sort_values(ascending=True)
+    index_list = oracle_est.index.to_list()
+        
+    # Take elements until total bucket error > ep
+    buckets = [0]
+    right_i = 0
+    S = 0
+    norm = 0
+    bucket_size = 0
+    while right_i < len(freqs):
+        right = oracle_est.iloc[right_i]
+        val = freqs[index_list[right_i]] * len(df)
+        S += val
+        norm += val ** p
+        bucket_size += 1
+
+        nest = n_estimate_harm_avg(S, buckets[-1] * len(df), right * len(df))
+        pred = nest * (S / nest) ** p
+        
+        if np.abs(norm - pred) / norm > ep and bucket_size > 1 and oracle_est.iloc[right_i-1] != buckets[-1]:
+            buckets.append(oracle_est.iloc[right_i - 1])
+            S = val
+            norm = val ** p
+            bucket_size = 1
+        right_i += 1
+    buckets.append(1)
+
+    return buckets
+
+
+# +
+p = 3
+oracle_freqs = rel_oracle_est(unique_freqs, 0.05)
+buckets = max_error_buckets(unique_freqs, oracle_freqs, 0.01, p)
+
+print_bucket_stats(buckets, oracle_freqs, p, print_table=False)
+
+# +
+p = 3
+oracle_freqs = abs_oracle_est(unique_freqs, 0.001)
+buckets = max_error_buckets(unique_freqs, oracle_freqs, 0.01, p)
+
+print_bucket_stats(buckets, oracle_freqs, p, print_table=False)
+# -
+
+buckets[:10]
+
 
 def calculate_errors(loss_func, ks, p, min_freq = 7):    
     errors = np.empty(len(ks))

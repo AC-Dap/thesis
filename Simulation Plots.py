@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.6
+#       jupytext_version: 1.16.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -202,8 +202,8 @@ def plot_bucket_nrmse(deg, df, df_name, df_prefix):
             bucket_expo_alt1_results, bucket_expo_alt1_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k_kh=0", sample_sizes)
             bucket_expo_alt2_results, bucket_expo_alt2_exacts = read_sim_data(df, f"bucket_{bucket_type}_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
 
-            bucket_expo_smarta_results, bucket_expo_smarta_exacts = read_sim_data(df, f"smart_a_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
-            bucket_expo_smartb_results, bucket_expo_smartb_exacts = read_sim_data(df, f"smart_b_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
+            bucket_expo_smarta_results, bucket_expo_smarta_exacts = read_sim_data(df, f"unif_bucket_{bucket_type}_{error_type}_k=sqrt(k)_ku=sqrt(k)_kh=0", sample_sizes)
+            bucket_expo_smartb_results, bucket_expo_smartb_exacts = read_sim_data(df, f"unif_bucket_{bucket_type}_{error_type}_k=64_ku=k/2_kh=k/2", sample_sizes)
             
             bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
 
@@ -236,17 +236,17 @@ def plot_bucket_nrmse(deg, df, df_name, df_prefix):
     
     fig.legend(*ax[0][0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
     
-    plt.savefig(f'figs/freq_{deg}_moment_bucket_{df_prefix}_nrmse', bbox_inches='tight')
+    # plt.savefig(f'figs/freq_{deg}_moment_bucket_{df_prefix}_nrmse', bbox_inches='tight')
     plt.show()
 
 plot_bucket_nrmse(3, deg3_aol, 'AOL', 'aol')
-plot_bucket_nrmse(4, deg4_aol, 'AOL', 'aol')
-plot_bucket_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_bucket_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_bucket_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_bucket_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_bucket_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-plot_bucket_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+# plot_bucket_nrmse(4, deg4_aol, 'AOL', 'aol')
+# plot_bucket_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+# plot_bucket_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+# plot_bucket_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+# plot_bucket_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+# plot_bucket_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+# plot_bucket_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
 
 # %%
 # Plot NRMSE error comparing both sketches, per oracle error type
@@ -259,7 +259,7 @@ def plot_both_nrmse(deg, df, df_name, df_prefix):
         swa_results, swa_exacts = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0", sample_sizes)
         bucket_expo_harm_results, bucket_expo_harm_exacts = read_sim_data(df, f"bucket_expo_harm_{error_type}_k=k/2_kh=k/2", sample_sizes)
         bucket_expo_alt_results, bucket_expo_alt_exacts = read_sim_data(df, f"bucket_expo_alt_{error_type}_k=k/2_kh=k/2", sample_sizes)
-        bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"cond_bucket_{error_type}_k=1_kh=k", sample_sizes)
+        bucket_cond_results, bucket_cond_exacts = read_sim_data(df, f"unif2_bucket_expo_{error_type}_k=sqrt(k)_ku=sqrt(k)_kh=0", sample_sizes)
         
         plot_mse(ax[i], sample_sizes, swa_results, swa_exacts, "SWA: $k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
         plot_mse(ax[i], sample_sizes, bucket_expo_harm_results, bucket_expo_harm_exacts, "Exponential Bucket Avg:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
@@ -283,18 +283,19 @@ def plot_both_nrmse(deg, df, df_name, df_prefix):
     fig.supylabel('Normalized Root MSE')
 
     fig.suptitle(f'{nth(deg)} Frequency Moment NRMSE vs. Sample Size on {df_name} data, Comparing Sketches')
+    fig.legend(*ax[0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
     
-    plt.savefig(f'figs/freq_{deg}_moment_both_{df_prefix}_nrmse', bbox_inches='tight')
+    # plt.savefig(f'figs/freq_{deg}_moment_both_{df_prefix}_nrmse', bbox_inches='tight')
     plt.show()
 
 plot_both_nrmse(3, deg3_aol, 'AOL', 'aol')
-plot_both_nrmse(4, deg4_aol, 'AOL', 'aol')
-plot_both_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_both_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-plot_both_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_both_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-plot_both_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
-plot_both_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+# plot_both_nrmse(4, deg4_aol, 'AOL', 'aol')
+# plot_both_nrmse(3, deg3_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+# plot_both_nrmse(4, deg4_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
+# plot_both_nrmse(3, deg3_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+# plot_both_nrmse(4, deg4_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
+# plot_both_nrmse(3, deg3_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+# plot_both_nrmse(4, deg4_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
 
 # %%
 # Plot absolute estimation error vs. sample size

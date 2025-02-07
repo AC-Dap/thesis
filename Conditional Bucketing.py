@@ -14,7 +14,45 @@
 # ---
 
 import numpy as np
+import matplotlib.pyplot as plt
 from prettytable import PrettyTable
+
+# +
+# Work with perfectly uniform bucket at first
+n = 10000 # Number of unique elements
+N = 100000 # Total sum of elements
+d = 3 # d-th moment
+
+rng = np.random.default_rng()
+
+def sim_uniform_sample(print_table=False):
+    els = rng.multinomial(N, np.ones(n) / n)
+    
+    # Try different number to sample
+    true_val = np.sum(els ** d)
+    t = PrettyTable(["k", "est", "error"])
+    
+    ks = np.arange(10, n, 10)
+    errs = []
+    for k in ks:
+        sample = els[:k]
+        est = np.sum(sample ** d) * N / np.sum(sample)
+        err = np.abs(est - true_val) / true_val
+        errs.append(err)
+        t.add_row([k, est, err])
+    
+    if print_table: print(t)
+    plt.plot(ks, errs)
+
+    est = (N / n)**d * n
+    plt.axhline(np.abs(est - true_val) / true_val)
+
+for _ in range(10):
+    sim_uniform_sample()
+
+# plt.yscale('log')
+plt.xscale('log')
+plt.show()
 
 # +
 # Model a single bucket
