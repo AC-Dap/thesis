@@ -484,14 +484,14 @@ int main(int argc, const char** argv) {
                 // sqrt(k) sqrt(k) 0
                 run_sims(
                     results, ks, total_trials,
-                    format("unif_bucket_{}_{}_k=sqrt(k)_ku=sqrt(k)_kh=0", bucket_name, o->name),
+                    format("unif2_bucket_{}_{}_k=sqrt(k)_ku=sqrt(k)_kh=0", bucket_name, o->name),
                     [&](size_t k, size_t n_trials) {
                         auto buckets = [&] {
-                            return bucket_gen(size_t(sqrt(k)));
+                            return bucket_gen(size_t(sqrt(k/2.)));
                         };
 
                         auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
-                            return unif_bucket_sketch(0, size_t(sqrt(k)), deg, b, o, ds);
+                            return unif_bucket_sketch(k/2, size_t(sqrt(k/2.)), deg, b, o, ds);
                         };
 
                         return run_n_bucket_sims(
@@ -505,11 +505,12 @@ int main(int argc, const char** argv) {
                     exact_moment,
                     mode
                 );
+                results.flush_to_file();
 
                 // 64 k 0
                 run_sims(
                     results, ks, total_trials,
-                    format("unif_bucket_{}_{}_k=64_ku=k_kh=0", bucket_name, o->name),
+                    format("unif2_bucket_{}_{}_k=64_ku=k_kh=0", bucket_name, o->name),
                     [&](size_t k, size_t n_trials) {
                         auto buckets = [&] {
                             return bucket_gen(64);
@@ -534,7 +535,7 @@ int main(int argc, const char** argv) {
                 // 64 k/2 k/2
                 run_sims(
                     results, ks, total_trials,
-                    format("unif_bucket_{}_{}_k=64_ku=k/2_kh=k/2", bucket_name, o->name),
+                    format("unif2_bucket_{}_{}_k=64_ku=k/2_kh=k/2", bucket_name, o->name),
                     [&](size_t k, size_t n_trials) {
                         auto buckets = [&] {
                             return bucket_gen(64);

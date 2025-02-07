@@ -318,7 +318,8 @@ double swa_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg, 
 }
 
 double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
-    vector bucket_top_p(buckets.size() - 1, Heap<tuple<double, ItemId>>(k_p + 1));
+    vector bucket_top_p(buckets.size() - 1, Heap<tuple<double, ItemId>>(k_p));
+    vector<size_t> bucket_counts(buckets.size() - 1, 0);
 
     random_device rd;
     mt19937 gen(rd());
@@ -329,6 +330,8 @@ double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg,
 
     // Process items
     process_ds_to_buckets([&](ItemId item) {
+        if (k_p == 0) return;
+
         auto freq_est = o.estimate(item);
 
         size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
@@ -340,11 +343,16 @@ double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg,
         } else if(weight > get<0>(h.heap[0])){
             h.pushpop({weight, item});
         }
+
+        bucket_counts[bucket_i - 1] += ds.item_counts[item];
     }, top_h, o, ds);
 
     // Get prediction of each bucket
     long double estimate = 0;
-    for (auto& h : bucket_top_p) {
+    for (int bucket_i = 0; bucket_i < bucket_top_p.size(); bucket_i++) {
+        if (k_p == 0) continue;
+
+        auto h = bucket_top_p[bucket_i];
         if (h.len < h.cap) {
             for (int i = 0; i < h.len; i++) {
                 estimate += pow(ds.item_counts.at(get<1>(h.heap[i])), deg);
@@ -352,13 +360,21 @@ double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg,
             continue;
         }
 
-        auto tau = get<0>(h.heap[0]);
-        for(int i = 0; i < h.len - 1; i++) {
-            auto item = get<1>(h.heap[1+i]);
-            auto weight = ds.item_counts[item];
-            auto prob = 1 - exp(tau);
-            estimate += pow(weight, deg) / prob;
+        // auto tau = get<0>(h.heap[0]);
+        // for(int i = 0; i < h.len - 1; i++) {
+        //     auto item = get<1>(h.heap[1+i]);
+        //     auto weight = ds.item_counts[item];
+        //     auto prob = 1 - exp(tau);
+        //     estimate += pow(weight, deg) / prob;
+        // }
+        double sum = 0;
+        double est = 0;
+        for (int i = 0; i < h.len; i++) {
+            auto item = get<1>(h.heap[i]);
+            sum += ds.item_counts[item];
+            est += pow(ds.item_counts[item], deg);
         }
+        estimate += est * bucket_counts[bucket_i] / sum;
     }
 
     // Add top_hh
