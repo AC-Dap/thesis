@@ -90,7 +90,7 @@ def place_in_buckets(buckets, est_freqs):
         while buckets[curr_bucket + 1] < freq:
             curr_bucket += 1
         filled_buckets[curr_bucket].append(unique_counts[item])
-    
+
     for i in range(k):
         filled_buckets[i] = np.array(filled_buckets[i])
     return filled_buckets
@@ -140,7 +140,7 @@ def generate_bucket_stats(buckets, freqs, p):
     filled_buckets = place_in_buckets(buckets, freqs)
 
     bucket_stats = []
-    
+
     for i, items in enumerate(filled_buckets):
         if len(items) == 0:
             bucket_stats.append(None)
@@ -159,30 +159,30 @@ def print_bucket_stats(buckets, freqs, p, print_table=True):
     k = len(buckets) - 1
     
     bucket_stats = generate_bucket_stats(buckets, freqs, p)
-    
+
     actual_norm, pred_norm = 0, 0
     for i in range(k):
         if bucket_stats[i] == None:
             continue
-        
+
         left, right = buckets[i] * len(df), buckets[i+1] * len(df)
         n, nest, norm, pred = bucket_stats[i]
         t.add_row([left, right, n, nest, norm, pred, norm-pred])
-    
+
         actual_norm += norm
         pred_norm += pred
-    
+
     print(actual_norm, pred_norm)
     if print_table:
         print(t)
-    
+
     # Plot loss for each bucket type
     bucket_errors_abs = [stats[2] - stats[3] if stats is not None else np.nan for stats in bucket_stats]
     bucket_errors_rel = [bucket_errors_abs[i] / stats[2] if stats is not None else np.nan for i, stats in enumerate(bucket_stats)]
-    
+
     plt.scatter(np.arange(k), bucket_errors_abs)
     plt.show()
-    
+
     plt.scatter(np.arange(k), bucket_errors_rel)
     plt.show()
 
@@ -216,7 +216,7 @@ def max_error_buckets(freqs, oracle_est, ep, p):
     # Sort freqs
     oracle_est = oracle_est.sort_values(ascending=True)
     index_list = oracle_est.index.to_list()
-        
+
     # Take elements until total bucket error > ep
     buckets = [0]
     right_i = 0
@@ -232,7 +232,7 @@ def max_error_buckets(freqs, oracle_est, ep, p):
 
         nest = n_estimate_harm_avg(S, buckets[-1] * len(df), right * len(df))
         pred = nest * (S / nest) ** p
-        
+
         if np.abs(norm - pred) / norm > ep and bucket_size > 1 and oracle_est.iloc[right_i-1] != buckets[-1]:
             buckets.append(oracle_est.iloc[right_i - 1])
             S = val

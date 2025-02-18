@@ -1,65 +1,15 @@
 #include <fstream>
 #include <iostream>
-#include <format>
 #include <string>
-#include <functional>
 #include <filesystem>
-#include <results.h>
 #include <csignal>
 
-#include "dataset.h"
-#include "simulations.h"
+#include "common/simulations.h"
+#include "common/mock_oracle.h"
+#include "common/io/dataset.h"
+#include "threshold/simulations.h"
 
 using namespace std;
-
-// Write mode to use for data file, if the file already exists.
-enum FileWriteMode {
-    SKIP,
-    OVERWRITE,
-};
-
-// Flag to save results to file on abort
-static volatile bool save_file = false;
-
-void signal_handler(const int sig_code) {
-    if (sig_code == SIGINT) {
-        save_file = true;
-    }
-}
-
-void run_sims(Results &results, vector<size_t> &ks, size_t n_sims,
-              string sketch_type, function<vector<double>(size_t, size_t)> run_n_sims,
-              __uint128_t exact_moment, FileWriteMode mode) {
-    for (size_t k: ks) {
-        // Get which trials we need to run
-        vector<size_t> trials;
-        for (int i = 1; i <= n_sims; i++) {
-            if (mode == OVERWRITE || !results.has(sketch_type, k, i)) {
-                trials.push_back(i);
-            }
-        }
-
-        if (trials.empty()) {
-            cout << "Skipping " << sketch_type << " k=" << k << endl;
-            continue;
-        }
-
-        // Run the trials
-        cout << sketch_type << " k=" << k << ": ";
-        vector<double> estimates = run_n_sims(k, trials.size());
-
-        // Write trials to results
-        for (size_t i = 0; i < trials.size(); i++) {
-            results.add_result(sketch_type, k, trials[i], estimates[i], exact_moment);
-        }
-
-        // Make sure our results file is updated with the newest sims
-        if (save_file) {
-            results.flush_to_file();
-            exit(1);
-        }
-    }
-}
 
 int main(int argc, const char** argv) {
     // Command line usage:
@@ -72,6 +22,7 @@ int main(int argc, const char** argv) {
     string test_path = argv[3];
     string output_name = argv[4];
 
+    // Read in datasets
     BackingItems backing_items = get_backing_items({train_path, test_path});
 
     Dataset ds_train(backing_items), ds_test(backing_items);
@@ -83,6 +34,7 @@ int main(int argc, const char** argv) {
 
     constexpr size_t min_freq = 7;
 
+    // Create oracles
     MockOracleAbsoluteError o_abs(0.001, "abs_0.001", ds_test);
     MockOracleRelativeError o_rel(0.05, "rel_0.05", ds_test);
     // MockOracleBinomialError o_bin(ds_train);
@@ -93,7 +45,9 @@ int main(int argc, const char** argv) {
     // Set up signal handler
     signal(SIGINT, signal_handler);
 
+    // Run all sims
     FileWriteMode mode = SKIP;
+    threshold::run_all_sims(ds_test, os, total_trials, output_name, mode);
     for (auto deg: degs) {
         // Load results
         string file_path = format("results/new_deg={}_{}.csv", deg, output_name);

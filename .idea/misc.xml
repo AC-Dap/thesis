@@ -3,6 +3,9 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12" />
   </component>
+  <component name="CMakePythonSetting">
+    <option name="pythonIntegrationState" value="YES" />
+  </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="MakefileSettings">
     <option name="linkedExternalProjectsSettings">
@@ -17,7 +20,5 @@
       </MakefileProjectSettings>
     </option>
   </component>
-  <component name="MakefileWorkspace" PROJECT_DIR="$PROJECT_DIR$/simulation">
-    <contentRoot DIR="$PROJECT_DIR$" />
-  </component>
+  <component name="MakefileWorkspace" PROJECT_DIR="$PROJECT_DIR$/simulation" />
 </project>

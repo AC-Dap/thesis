@@ -42,14 +42,14 @@ if __name__ == "__main__":
     # Run ./out/sim on each dataset
     print("Running simulations...")
     for i in range(N_DATASETS, 0, -1):
+        output_name = f"fake_{a}_results"
         subprocess.run(["./out/sim", "1",
                         f"{directory_path}/train.txt",
                         f"{directory_path}/test_{i}.txt",
-                        f"fake_{a}_results"])
+                        output_name])
 
         # Renumber latest simulation's trial number so it doesn't get overwritten
-        def update_trial_numbers(deg):
-            csv_name = f"results/new_deg={deg}_fake_{a}_results.csv"
+        def update_trial_numbers(csv_name):
             df = pd.read_csv(csv_name)
 
             # Get existing combinations of sketch_type, k, and the new n_trial value
@@ -62,5 +62,4 @@ if __name__ == "__main__":
             df.loc[mask, "n_trial"] = i
             df.to_csv(csv_name, index=False)
 
-        update_trial_numbers(3)
-        update_trial_numbers(4)
+        update_trial_numbers(f"results/threshold_{output_name}.csv")
