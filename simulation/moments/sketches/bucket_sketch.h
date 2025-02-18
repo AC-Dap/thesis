@@ -25,6 +25,7 @@ namespace moments {
 
     double unif_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
+    double unif2_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 }
 
 #endif //MOMENTS_BUCKET_SKETCH_H

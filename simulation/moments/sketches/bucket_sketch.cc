@@ -283,6 +283,63 @@ double swa_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg, 
 
 double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
     vector bucket_top_p(buckets.size() - 1, Heap<tuple<double, ItemId>>(k_p));
+
+    random_device rd;
+    mt19937 gen(rd());
+    SeedFun seed = generate_seed_function(gen, ds);
+
+    // Take out the top k_hh items
+    Heap<tuple<double, ItemId>> top_h(k_hh);
+
+    // Process items
+    process_ds_to_buckets([&](ItemId item) {
+        if (k_p == 0) return;
+
+        auto freq_est = o.estimate(item);
+
+        size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
+        auto& h = bucket_top_p[bucket_i - 1];
+
+        auto weight = -seed[item];
+        if(h.len < h.cap) {
+            h.push({weight, item});
+        } else if(weight > get<0>(h.heap[0])){
+            h.pushpop({weight, item});
+        }
+    }, top_h, o, ds);
+
+    // Get prediction of each bucket
+    long double estimate = 0;
+    for (int bucket_i = 0; bucket_i < bucket_top_p.size(); bucket_i++) {
+        if (k_p == 0) continue;
+
+        auto h = bucket_top_p[bucket_i];
+        if (h.len < h.cap) {
+            for (int i = 0; i < h.len; i++) {
+                estimate += pow(ds.item_counts.at(get<1>(h.heap[i])), deg);
+            }
+            continue;
+        }
+
+        auto tau = get<0>(h.heap[0]);
+        for(int i = 0; i < h.len - 1; i++) {
+            auto item = get<1>(h.heap[1+i]);
+            auto weight = ds.item_counts[item];
+            auto prob = 1 - exp(tau);
+            estimate += pow(weight, deg) / prob;
+        }
+    }
+
+    // Add top_hh
+    for (int i = 0; i < top_h.len; i++) {
+        estimate += pow(ds.item_counts.at(get<1>(top_h.heap[i])), deg);
+    }
+
+    return estimate;
+}
+
+double unif2_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds) {
+    vector bucket_top_p(buckets.size() - 1, Heap<tuple<double, ItemId>>(k_p));
     vector<size_t> bucket_counts(buckets.size() - 1, 0);
 
     random_device rd;
@@ -324,13 +381,6 @@ double unif_bucket_sketch(const size_t k_hh, const size_t k_p, const size_t deg,
             continue;
         }
 
-        // auto tau = get<0>(h.heap[0]);
-        // for(int i = 0; i < h.len - 1; i++) {
-        //     auto item = get<1>(h.heap[1+i]);
-        //     auto weight = ds.item_counts[item];
-        //     auto prob = 1 - exp(tau);
-        //     estimate += pow(weight, deg) / prob;
-        // }
         double sum = 0;
         double est = 0;
         for (int i = 0; i < h.len; i++) {

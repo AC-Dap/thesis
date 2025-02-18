@@ -63,3 +63,5 @@ if __name__ == "__main__":
             df.to_csv(csv_name, index=False)
 
         update_trial_numbers(f"results/threshold_{output_name}.csv")
+        update_trial_numbers(f"results/moments_deg=3_{output_name}.csv")
+        update_trial_numbers(f"results/moments_deg=4_{output_name}.csv")

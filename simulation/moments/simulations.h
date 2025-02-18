@@ -9,8 +9,6 @@
 #include "common/bucket_sketch.h"
 #include "common/io/dataset.h"
 
-#include "moments/estimator.h"
-
 using namespace std;
 
 namespace moments {
@@ -23,8 +21,8 @@ namespace moments {
     vector<double> run_n_swa_sims(size_t kh, size_t kp, size_t ku, MockOracle& o, size_t deg, size_t nsims, Dataset& ds);
 
     vector<double> run_n_bucket_sims(
-        const function<Buckets()> bucket_gen,
-        const function<double(Buckets&, MockOracle&, Dataset&)> sketch,
+        function<Buckets()> bucket_gen,
+        function<double(Buckets&, MockOracle&, Dataset&)> sketch,
         size_t nsims, MockOracle& o, Dataset& ds);
 }
 

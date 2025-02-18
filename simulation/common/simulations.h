@@ -41,12 +41,12 @@ inline void run_sims(Results &results, const vector<size_t> &ks, const size_t n_
         }
 
         if (trials.empty()) {
-            cout << "Skipping " << sketch_type << " k=" << k << endl;
+            cout << results.output_path << " | Skipping " << sketch_type << " k=" << k << endl;
             continue;
         }
 
         // Run the trials
-        cout << sketch_type << " k=" << k << ": ";
+        cout << results.output_path << " | " << sketch_type << " k=" << k << ": ";
         vector<double> estimates = run_n_sims(k, trials.size());
 
         // Write trials to results

@@ -35,15 +35,15 @@ void run_all_sims(Dataset& ds, vector<MockOracle*>& os,
     __uint128_t exact_threshold = calculate_exact_threshold(ds, threshold);
 
     // PPSWOR
-    // run_sims(
-    //     results, ks, total_trials,
-    //     "ppswor",
-    //     [&](size_t k, size_t n_trials) {
-    //         return run_n_ppswor_sims(k, deg, n_trials, ds);
-    //     },
-    //     exact_moment,
-    //     mode
-    // );
+    run_sims(
+        results, ks, total_trials,
+        "ppswor",
+        [&](size_t k, size_t n_trials) {
+            return run_n_ppswor_sims(k, threshold, n_trials, ds);
+        },
+        exact_threshold,
+        mode
+    );
 
     // Exact PPSWOR
     for (auto* o: os) {
@@ -275,59 +275,6 @@ void run_all_sims(Dataset& ds, vector<MockOracle*>& os,
         }
     }
 
-    // Cond bucket estimator
-    // for (auto* o: os) {
-    //     // 1 0
-    //     run_sims(
-    //         results, ks, total_trials,
-    //         format("cond_bucket_{}_k=1_kh=0", o->name),
-    //         [&](size_t k, size_t n_trials) {
-    //             auto buckets = [&] {
-    //                 return generate_linear_buckets(1);
-    //             };
-    //
-    //             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
-    //                 return cond_bucket_sketch(0, deg, b, o, ds);
-    //             };
-    //
-    //             return run_n_bucket_sims(
-    //                 buckets,
-    //                 sketch,
-    //                 n_trials,
-    //                 *o,
-    //                 ds
-    //             );
-    //         },
-    //         exact_threshold,
-    //         mode
-    //     );
-    //
-    //     // 1 k
-    //     run_sims(
-    //         results, ks, total_trials,
-    //         format("cond_bucket_{}_k=1_kh=k", o->name),
-    //         [&](size_t k, size_t n_trials) {
-    //             auto buckets = [&] {
-    //                 return generate_linear_buckets(1);
-    //             };
-    //
-    //             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
-    //                 return cond_bucket_sketch(k, deg, b, o, ds);
-    //             };
-    //
-    //             return run_n_bucket_sims(
-    //                 buckets,
-    //                 sketch,
-    //                 n_trials,
-    //                 *o,
-    //                 ds
-    //             );
-    //         },
-    //         exact_threshold,
-    //         mode
-    //     );
-    // }
-
     // SWA bucket estimator
     for (auto &[bucket_gen, bucket_name]: bucket_types) {
         for (auto* o: os) {
@@ -414,7 +361,7 @@ void run_all_sims(Dataset& ds, vector<MockOracle*>& os,
             // sqrt(k) sqrt(k) 0
             run_sims(
                 results, ks, total_trials,
-                format("unif2_bucket_{}_{}_k=sqrt(k)_ku=sqrt(k)_kh=0", bucket_name, o->name),
+                format("unif_bucket_{}_{}_k=sqrt(k)_ku=sqrt(k)_kh=0", bucket_name, o->name),
                 [&](size_t k, size_t n_trials) {
                     auto buckets = [&] {
                         return bucket_gen(size_t(sqrt(k/2.)));
@@ -437,54 +384,134 @@ void run_all_sims(Dataset& ds, vector<MockOracle*>& os,
             );
 
             // 64 k 0
-            // run_sims(
-            //     results, ks, total_trials,
-            //     format("unif_bucket_{}_{}_k=64_ku=k_kh=0", bucket_name, o->name),
-            //     [&](size_t k, size_t n_trials) {
-            //         auto buckets = [&] {
-            //             return bucket_gen(64);
-            //         };
-            //
-            //         auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
-            //             return unif_bucket_sketch(0, k / 64, threshold, b, o, ds);
-            //         };
-            //
-            //         return run_n_bucket_sims(
-            //             buckets,
-            //             sketch,
-            //             n_trials,
-            //             *o,
-            //             ds
-            //         );
-            //     },
-            //     exact_threshold,
-            //     mode
-            // );
-            //
-            // // 64 k/2 k/2
-            // run_sims(
-            //     results, ks, total_trials,
-            //     format("unif_bucket_{}_{}_k=64_ku=k/2_kh=k/2", bucket_name, o->name),
-            //     [&](size_t k, size_t n_trials) {
-            //         auto buckets = [&] {
-            //             return bucket_gen(64);
-            //         };
-            //
-            //         auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
-            //             return unif_bucket_sketch(k/2, k / 128, threshold, b, o, ds);
-            //         };
-            //
-            //         return run_n_bucket_sims(
-            //             buckets,
-            //             sketch,
-            //             n_trials,
-            //             *o,
-            //             ds
-            //         );
-            //     },
-            //     exact_threshold,
-            //     mode
-            // );
+            run_sims(
+                results, ks, total_trials,
+                format("unif_bucket_{}_{}_k=64_ku=k_kh=0", bucket_name, o->name),
+                [&](size_t k, size_t n_trials) {
+                    auto buckets = [&] {
+                        return bucket_gen(64);
+                    };
+
+                    auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                        return unif_bucket_sketch(0, k / 64, threshold, b, o, ds);
+                    };
+
+                    return run_n_bucket_sims(
+                        buckets,
+                        sketch,
+                        n_trials,
+                        *o,
+                        ds
+                    );
+                },
+                exact_threshold,
+                mode
+            );
+
+            // 64 k/2 k/2
+            run_sims(
+                results, ks, total_trials,
+                format("unif_bucket_{}_{}_k=64_ku=k/2_kh=k/2", bucket_name, o->name),
+                [&](size_t k, size_t n_trials) {
+                    auto buckets = [&] {
+                        return bucket_gen(64);
+                    };
+
+                    auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                        return unif_bucket_sketch(k/2, k / 128, threshold, b, o, ds);
+                    };
+
+                    return run_n_bucket_sims(
+                        buckets,
+                        sketch,
+                        n_trials,
+                        *o,
+                        ds
+                    );
+                },
+                exact_threshold,
+                mode
+            );
+        }
+    }
+
+    // Unif2 bucket estimator
+    for (auto &[bucket_gen, bucket_name]: bucket_types) {
+        for (auto* o: os) {
+            // sqrt(k) sqrt(k) 0
+            run_sims(
+                results, ks, total_trials,
+                format("unif2_bucket_{}_{}_k=sqrt(k)_ku=sqrt(k)_kh=0", bucket_name, o->name),
+                [&](size_t k, size_t n_trials) {
+                    auto buckets = [&] {
+                        return bucket_gen(size_t(sqrt(k/2.)));
+                    };
+
+                    auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                        return unif2_bucket_sketch(k/2., size_t(sqrt(k/2.)), threshold, b, o, ds);
+                    };
+
+                    return run_n_bucket_sims(
+                        buckets,
+                        sketch,
+                        n_trials,
+                        *o,
+                        ds
+                    );
+                },
+                exact_threshold,
+                mode
+            );
+
+            // 64 k 0
+            run_sims(
+                results, ks, total_trials,
+                format("unif2_bucket_{}_{}_k=64_ku=k_kh=0", bucket_name, o->name),
+                [&](size_t k, size_t n_trials) {
+                    auto buckets = [&] {
+                        return bucket_gen(64);
+                    };
+
+                    auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                        return unif2_bucket_sketch(0, k / 64, threshold, b, o, ds);
+                    };
+
+                    return run_n_bucket_sims(
+                        buckets,
+                        sketch,
+                        n_trials,
+                        *o,
+                        ds
+                    );
+                },
+                exact_threshold,
+                mode
+            );
+
+            // 64 k/2 k/2
+            run_sims(
+                results, ks, total_trials,
+                format("unif2_bucket_{}_{}_k=64_ku=k/2_kh=k/2", bucket_name, o->name),
+                [&](size_t k, size_t n_trials) {
+                    auto buckets = [&] {
+                        return bucket_gen(64);
+                    };
+
+                    auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
+                        return unif2_bucket_sketch(k/2, k / 128, threshold, b, o, ds);
+                    };
+
+                    return run_n_bucket_sims(
+                        buckets,
+                        sketch,
+                        n_trials,
+                        *o,
+                        ds
+                    );
+                },
+                exact_threshold,
+                mode
+            );
         }
     }
 
@@ -492,34 +519,35 @@ void run_all_sims(Dataset& ds, vector<MockOracle*>& os,
     results.flush_to_file();
 }
 
-// vector<double> run_n_ppswor_sims(size_t k, size_t deg, size_t nsims, Dataset& ds){
-//     auto t1 = chrono::high_resolution_clock::now();
-//
-//     PPSWOR pp(k, 2, ds);
-//
-//     vector<double> estimates(nsims);
-//     for(int i = 0; i < nsims; i++) {
-//         if(i != 0) pp.reset();
-//
-//         for(auto item : ds.lines) {
-//             pp.update(item, 1);
-//         }
-//
-//         auto sample = pp.sample();
-//         auto weights = get<1>(sample), probs = get<2>(sample);
-//
-//         estimates[i] = estimate_moment(weights, probs, deg);
-//
-//         cout << "." << flush;
-//     }
-//     cout << endl;
-//
-//     auto t2 = chrono::high_resolution_clock::now();
-//     cout << " | " << chrono::duration_cast<chrono::milliseconds>(t2-t1).count() / 1000.0 / nsims
-//          << " seconds on average" << endl;
-//
-//     return estimates;
-// }
+vector<double> run_n_ppswor_sims(size_t k, double threshold, size_t nsims, Dataset& ds){
+    auto t1 = chrono::high_resolution_clock::now();
+
+    PPSWOR pp(k, 2, ds);
+
+    vector<double> estimates(nsims);
+    size_t threshold_count = threshold * ds.lines.size();
+    for(int i = 0; i < nsims; i++) {
+        if(i != 0) pp.reset();
+
+        for(auto item : ds.lines) {
+            pp.update(item, 1);
+        }
+
+        auto sample = pp.sample();
+        auto weights = get<1>(sample), probs = get<2>(sample);
+
+        estimates[i] = estimate_threshold(weights, probs, threshold_count);
+
+        cout << "." << flush;
+    }
+    cout << endl;
+
+    auto t2 = chrono::high_resolution_clock::now();
+    cout << " | " << chrono::duration_cast<chrono::milliseconds>(t2-t1).count() / 1000.0 / nsims
+         << " seconds on average" << endl;
+
+    return estimates;
+}
 
 vector<double> run_n_swa_sims(size_t kh, size_t kp, size_t ku, MockOracle& o, double threshold, size_t nsims, Dataset& ds){
     auto t1 = chrono::high_resolution_clock::now();
