@@ -1,0 +1,30 @@
+#ifndef MOMENTS_BUCKET_SKETCH_H
+#define MOMENTS_BUCKET_SKETCH_H
+#include <functional>
+#include <cmath>
+#include "common/io/dataset.h"
+#include "common/mock_oracle.h"
+#include "common/bucket_sketch.h"
+
+namespace moments {
+
+    double bucket_sketch(size_t k_hh, size_t deg,
+                         const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double smart_a_bucket_sketch(size_t k_hh, size_t deg,
+                         const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double smart_b_bucket_sketch(size_t k_hh, size_t deg,
+                         const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double cond_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double alt_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double swa_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double unif_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+}
+
+#endif //MOMENTS_BUCKET_SKETCH_H

@@ -9,7 +9,10 @@ common_files := common/io/dataset.cc common/io/results.cc common/utils/hashing.c
 threshold_files := threshold/sketches/bucket_sketch.cc threshold/sketches/fake_swa.cc \
 	threshold/sketches/swa.cc threshold/simulations.cc
 
-SRC := $(common_files) $(threshold_files) main.cc
+moments_files := moments/sketches/bucket_sketch.cc moments/sketches/fake_swa.cc \
+	moments/sketches/swa.cc moments/simulations.cc
+
+SRC := $(common_files) $(threshold_files) $(moments_files) main.cc
 
 # Output files
 OUT_DIR := out
