@@ -1,4 +1,4 @@
-#include "fake_swa.h"
+#include "threshold/sketches/fake_swa.h"
 
 #include <vector>
 #include <string>
@@ -9,12 +9,14 @@
 
 #include <iostream>
 
-#include "mock_oracle.h"
-#include "heap.h"
-#include "hashing.h"
-#include "dataset.h"
+#include "common/mock_oracle.h"
+#include "common/heap.h"
+#include "common/utils/hashing.h"
+#include "common/io/dataset.h"
 
 using namespace std;
+
+namespace threshold {
 
 void get_top_items(Heap<tuple<double, ItemId>>& h, const DatasetItemCounts& item_counts, const function<double(ItemId)>& weight_func) {
     if(h.cap == 0) return;
@@ -89,4 +91,6 @@ tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
     }
 
     return {s, weights, probs};
+}
+
 }

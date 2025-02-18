@@ -1,12 +1,12 @@
-#include "count_sketch.h"
+#include "common/count_sketch.h"
 
 #include <tuple>
 #include <vector>
 #include <algorithm>
 #include <array>
 
-#include "heap.h"
-#include "hashing.h"
+#include "common/heap.h"
+#include "common/utils/hashing.h"
 
 using namespace std;
 

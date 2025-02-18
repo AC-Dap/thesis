@@ -1,7 +1,7 @@
-#include "ppswor.h"
+#include "common/ppswor.h"
 
-#include "count_sketch.h"
-#include "hashing.h"
+#include "common/count_sketch.h"
+#include "common/utils/hashing.h"
 
 using namespace std;
 

@@ -1,4 +1,7 @@
-#include "swa.h"
+#include "threshold/sketches/swa.h"
+#include "common/io/dataset.h"
+
+namespace threshold {
 
 /**
  * Tries inserting `item` into the heap `h`, return true if an overflow occurs.
@@ -76,4 +79,6 @@ tuple<vector<ItemId>, vector<double>, vector<double>> SWA::sample() {
     }
 
     return {s, weights, probs};
+}
+
 }

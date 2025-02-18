@@ -3,10 +3,10 @@
 
 #include <string>
 #include <random>
-#include <iostream>
 #include <vector>
+#include <stdexcept>
 
-#include "dataset.h"
+#include "common/io/dataset.h"
 
 using namespace std;
 

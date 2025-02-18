@@ -1,8 +1,8 @@
 #ifndef PPSWOR_H
 #define PPSWOR_H
 
-#include "count_sketch.h"
-#include "hashing.h"
+#include "common/count_sketch.h"
+#include "common/utils/hashing.h"
 
 using namespace std;
 

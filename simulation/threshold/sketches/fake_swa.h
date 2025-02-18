@@ -1,13 +1,15 @@
-#ifndef FAKE_SWA_H
-#define FAKE_SWA_H
+#ifndef THRESHOLD_FAKE_SWA_H
+#define THRESHOLD_FAKE_SWA_H
 
 #include <vector>
-#include <string>
 #include <tuple>
 
-#include "mock_oracle.h"
+#include "common/mock_oracle.h"
+#include "common/io/dataset.h"
 
 using namespace std;
+
+namespace threshold {
 
 /**
  * We note that a SWA sample does not depend on the order of items received.
@@ -17,5 +19,7 @@ using namespace std;
  */
 tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
     size_t kh, size_t kp, size_t ku, double threshold, MockOracle& oracle, Dataset& ds);
+
+}
 
 #endif

@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "dataset.h"
+#include "common/io/dataset.h"
 
 using namespace std;
 

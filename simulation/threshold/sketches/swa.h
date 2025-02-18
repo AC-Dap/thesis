@@ -1,14 +1,16 @@
-#ifndef SWA_H
-#define SWA_H
+#ifndef THRESHOLD_SWA_H
+#define THRESHOLD_SWA_H
 
 #include <vector>
 #include <tuple>
 
-#include "mock_oracle.h"
-#include "hashing.h"
-#include "heap.h"
+#include "common/mock_oracle.h"
+#include "common/heap.h"
+#include "common/utils/hashing.h"
 
 using namespace std;
+
+namespace threshold {
 
 struct SWA {
     SWA(size_t kh, size_t kp, size_t ku, size_t deg, MockOracle& oracle, Dataset& ds):
@@ -44,5 +46,7 @@ struct SWA {
     SeedFun seed;
     Dataset& ds;
 };
+
+}
 
 #endif

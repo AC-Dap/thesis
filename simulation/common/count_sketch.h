@@ -4,8 +4,8 @@
 #include <tuple>
 #include <vector>
 
-#include "heap.h"
-#include "hashing.h"
+#include "common/heap.h"
+#include "common/utils/hashing.h"
 
 using namespace std;
 
