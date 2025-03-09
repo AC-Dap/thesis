@@ -24,19 +24,16 @@ int main(int argc, const char** argv) {
     string output_name = argv[4];
 
     // Read in datasets
-    BackingItems backing_items = get_backing_items({train_path, test_path});
-
-    Dataset ds_train(backing_items), ds_test(backing_items);
-    ds_train.read_from_file(train_path);
-    ds_test.read_from_file(test_path);
+    size_t n_unique_items = count_unique_items({train_path, test_path});
+    Dataset ds_train(n_unique_items), ds_test(n_unique_items);
+    ds_train.add_from_file(train_path);
+    ds_test.add_from_file(test_path);
 
     // Create oracles
     MockOracleAbsoluteError o_abs(0.001, "abs_0.001", ds_test);
     MockOracleRelativeError o_rel(0.05, "rel_0.05", ds_test);
-    // MockOracleBinomialError o_bin(ds_train);
     ExactOracle o_train("train", ds_train);
-    ExactOracle o_exact("exact", ds_test);
-    vector<MockOracle*> os = {&o_abs, &o_rel, &o_train, &o_exact};
+    vector<MockOracle*> os = {&o_abs, &o_rel, &o_train};
 
     // Set up signal handler
     signal(SIGINT, signal_handler);

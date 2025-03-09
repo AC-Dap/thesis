@@ -36,7 +36,7 @@ struct SWA {
         std::random_device rd;
         std::mt19937 gen(rd());
 
-        seed = generate_seed_function(gen, ds);
+        seed = generate_seed_function(gen, ds.item_counts.size());
     }
 
     size_t kh, kp, ku, deg;

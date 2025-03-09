@@ -1,0 +1,4 @@
+The CAIDA UCSD Anonymized OC48 Internet Traces 2002-2003 - 2022-08-14,
+    https://data.caida.org/datasets/oc48/oc48-original/
+
+Downloaded from https://www.caida.org/catalog/datasets/passive_oc48_dataset/

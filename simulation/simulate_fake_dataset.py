@@ -6,7 +6,7 @@ import subprocess
 
 
 N_ELEMENTS = 1000000
-N_DATASETS = 30 # + 1 for training
+N_DATASETS = 10 # + 1 for training
 rng = np.random.default_rng()
 
 def generate_dataset(a):
@@ -18,10 +18,8 @@ def write_dataset(a, path):
 
     data = generate_dataset(a)
     with open(path, 'w') as f:
-        # Header line
-        f.write("Index\tQuery\n")
         for i, el in enumerate(data):
-            f.write(f"{i}\t{el}\n")
+            f.write(f"{el}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -42,10 +40,11 @@ if __name__ == "__main__":
     # Run ./out/sim on each dataset
     print("Running simulations...")
     for i in range(N_DATASETS, 0, -1):
-        output_name = f"fake_{a}_results"
+        output_name = f"fake_{a}"
+        processed_data_path = f"../data/processed/fake_{a}_dataset"
         subprocess.run(["./out/sim", "1",
-                        f"{directory_path}/train.txt",
-                        f"{directory_path}/test_{i}.txt",
+                        f"{processed_data_path}/train.txt",
+                        f"{processed_data_path}/test_{i}.txt",
                         output_name])
 
         # Renumber latest simulation's trial number so it doesn't get overwritten
@@ -62,6 +61,6 @@ if __name__ == "__main__":
             df.loc[mask, "n_trial"] = i
             df.to_csv(csv_name, index=False)
 
-        update_trial_numbers(f"results/threshold_{output_name}.csv")
-        update_trial_numbers(f"results/moments_deg=3_{output_name}.csv")
-        update_trial_numbers(f"results/moments_deg=4_{output_name}.csv")
+        update_trial_numbers(f"results/{output_name}_threshold.csv")
+        update_trial_numbers(f"results/{output_name}_moments_deg=3.csv")
+        update_trial_numbers(f"results/{output_name}_moments_deg=4.csv")

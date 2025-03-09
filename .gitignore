@@ -2,4 +2,7 @@
 *.ipynb
 data/AOL-user-ct-collection/*
 !data/AOL-user-ct-collection/info.txt
+data/CAIDA/*
+!data/CAIDA/source.txt
+data/processed/*
 simulation/out

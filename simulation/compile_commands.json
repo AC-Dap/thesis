@@ -1,0 +1,274 @@
+[
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/io/dataset.cc",
+   "-o",
+   "out/common/io/dataset.o"
+  ],
+  "file": "common/io/dataset.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/io/results.cc",
+   "-o",
+   "out/common/io/results.o"
+  ],
+  "file": "common/io/results.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/utils/hashing.cc",
+   "-o",
+   "out/common/utils/hashing.o"
+  ],
+  "file": "common/utils/hashing.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/bucket_sketch.cc",
+   "-o",
+   "out/common/bucket_sketch.o"
+  ],
+  "file": "common/bucket_sketch.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/count_sketch.cc",
+   "-o",
+   "out/common/count_sketch.o"
+  ],
+  "file": "common/count_sketch.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "common/ppswor.cc",
+   "-o",
+   "out/common/ppswor.o"
+  ],
+  "file": "common/ppswor.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "threshold/sketches/bucket_sketch.cc",
+   "-o",
+   "out/threshold/sketches/bucket_sketch.o"
+  ],
+  "file": "threshold/sketches/bucket_sketch.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "threshold/sketches/fake_swa.cc",
+   "-o",
+   "out/threshold/sketches/fake_swa.o"
+  ],
+  "file": "threshold/sketches/fake_swa.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "threshold/sketches/swa.cc",
+   "-o",
+   "out/threshold/sketches/swa.o"
+  ],
+  "file": "threshold/sketches/swa.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "threshold/simulations.cc",
+   "-o",
+   "out/threshold/simulations.o"
+  ],
+  "file": "threshold/simulations.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "moments/sketches/bucket_sketch.cc",
+   "-o",
+   "out/moments/sketches/bucket_sketch.o"
+  ],
+  "file": "moments/sketches/bucket_sketch.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "moments/sketches/fake_swa.cc",
+   "-o",
+   "out/moments/sketches/fake_swa.o"
+  ],
+  "file": "moments/sketches/fake_swa.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "moments/sketches/parsimonious.cc",
+   "-o",
+   "out/moments/sketches/parsimonious.o"
+  ],
+  "file": "moments/sketches/parsimonious.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "moments/sketches/swa.cc",
+   "-o",
+   "out/moments/sketches/swa.o"
+  ],
+  "file": "moments/sketches/swa.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "moments/simulations.cc",
+   "-o",
+   "out/moments/simulations.o"
+  ],
+  "file": "moments/simulations.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "main.cc",
+   "-o",
+   "out/main.o"
+  ],
+  "file": "main.cc"
+ },
+ {
+  "directory": "\\\\wsl.localhost/Ubuntu/home/cuian/thesis/simulation",
+  "arguments": [
+   "g++",
+   "-I.",
+   "-O3",
+   "-std=c++20",
+   "-MMD",
+   "-MP",
+   "-c",
+   "run_caida.cc",
+   "-o",
+   "out/run_caida.o"
+  ],
+  "file": "run_caida.cc"
+ }
+]

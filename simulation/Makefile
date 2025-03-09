@@ -9,21 +9,27 @@ common_files := common/io/dataset.cc common/io/results.cc common/utils/hashing.c
 threshold_files := threshold/sketches/bucket_sketch.cc threshold/sketches/fake_swa.cc \
 	threshold/sketches/swa.cc threshold/simulations.cc
 
-moments_files := moments/sketches/bucket_sketch.cc moments/sketches/fake_swa.cc \
+moments_files := moments/sketches/bucket_sketch.cc moments/sketches/fake_swa.cc moments/sketches/parsimonious.cc \
 	moments/sketches/swa.cc moments/simulations.cc
 
 SRC := $(common_files) $(threshold_files) $(moments_files) main.cc
+CAIDA_SRC := $(common_files) $(threshold_files) $(moments_files) run_caida.cc
 
 # Output files
 OUT_DIR := out
 OBJ := $(patsubst %.cc, $(OUT_DIR)/%.o, $(SRC))  # Store object files in out/
+CAIDA_OBJ := $(patsubst %.cc, $(OUT_DIR)/%.o, $(CAIDA_SRC))  # Store object files in out/
 
 TARGET := $(OUT_DIR)/sim
+CAIDA_TARGET := $(OUT_DIR)/caida_sim
 
-all: $(TARGET)
+all: $(TARGET) $(CAIDA_TARGET)
 
 # Build the main executable
 $(TARGET): $(OBJ) | $(OUT_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+$(CAIDA_TARGET): $(CAIDA_OBJ) | $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 # Compile object files
@@ -45,10 +51,14 @@ clean:
 
 .PHONY: run_aol
 run_aol: $(TARGET)
-	$(TARGET) 30 \
-  		../data/AOL-user-ct-collection/user-ct-test-collection-01.txt \
-  		../data/AOL-user-ct-collection/user-ct-test-collection-02.txt \
-  		aol_results
+	$(TARGET) 10 \
+  		../data/processed/AOL/train.txt \
+  		../data/processed/AOL/test.txt \
+  		aol
+
+.PHONY: run_caida
+run_caida: $(CAIDA_TARGET)
+	$(CAIDA_TARGET)
 
 .PHONY: run_fake
 run_fake: $(TARGET) simulate_fake_dataset.py

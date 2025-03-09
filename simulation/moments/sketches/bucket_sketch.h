@@ -7,6 +7,13 @@
 #include "common/bucket_sketch.h"
 
 namespace moments {
+    double central_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double unbiased_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double counting_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
+
+    double sampling_bucket_sketch(size_t k_hh, size_t k_u, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
     double bucket_sketch(size_t k_hh, size_t deg,
                          const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
@@ -16,10 +23,6 @@ namespace moments {
 
     double smart_b_bucket_sketch(size_t k_hh, size_t deg,
                          const function<double(double, double, double)>& n_estimate, const Buckets& buckets, MockOracle& o, const Dataset& ds);
-
-    double cond_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
-
-    double alt_bucket_sketch(size_t k_hh, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 
     double swa_bucket_sketch(size_t k_hh, size_t k_p, size_t deg, const Buckets& buckets, MockOracle& o, const Dataset& ds);
 

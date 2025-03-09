@@ -12,19 +12,19 @@ typedef vector<int> SignFun;
 typedef vector<double> SeedFun;
 
 /**
-    Generates a random hash for every item in `ds`, mapping to an integer between
+    Generates a random hash for `num_unique_elements`, mapping to an integer between
     0 and `width` exclusive.
  */
-HashFun generate_hash_function(mt19937& rng, Dataset& ds, size_t width);
+HashFun generate_hash_function(mt19937& rng, size_t num_unique_elements, size_t width);
 
 /**
-    Generates a random sign for every item in `ds`.
+    Generates a random sign for `num_unique_elements`.
  */
-SignFun generate_sign_function(mt19937& rng, Dataset& ds);
+SignFun generate_sign_function(mt19937& rng, size_t num_unique_elements);
 
 /**
-    Generates a random seed for every item in `ds`. The seed is distributed Expo(1).
+    Generates a random seed for `num_unique_elements`. The seed is distributed Expo(1).
  */
-SeedFun generate_seed_function(mt19937& rng, const Dataset& ds);
+SeedFun generate_seed_function(mt19937& rng, size_t num_unique_elements);
 
 #endif

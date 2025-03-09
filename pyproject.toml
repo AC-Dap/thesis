@@ -1,1 +1,20 @@
-[tool.jupytext]formats = "ipynb,py:percent"
+[project]
+name = "thesis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dpkt>=1.9.8",
+    "jupyterlab>=4.3.5",
+    "jupytext>=1.16.7",
+    "matplotlib>=3.10.1",
+    "numpy>=2.2.3",
+    "pandas>=2.2.3",
+    "scapy>=2.6.1",
+    "seaborn>=0.13.2",
+    "tqdm>=4.67.1",
+]
+
+[tool.jupytext]
+formats = "ipynb,py:percent"

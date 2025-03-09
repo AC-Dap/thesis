@@ -10,9 +10,9 @@
 using namespace std;
 
 struct CountSketch {
-    CountSketch(size_t width, size_t k, Dataset& ds)
+    CountSketch(size_t width, size_t k, size_t num_unique_elements)
         : width(width), k(k), sketch(depth, vector<double>(width, 0)),
-            top_k(k), hashes(depth), signs(depth), ds(ds) {
+            top_k(k), hashes(depth), signs(depth), num_unique_elements(num_unique_elements) {
         reset_hashes();
     }
 
@@ -33,8 +33,8 @@ struct CountSketch {
         std::mt19937 gen(rd());
 
         for(int i = 0; i < depth; i++) {
-            hashes[i] = generate_hash_function(gen, ds, width);
-            signs[i] = generate_sign_function(gen, ds);
+            hashes[i] = generate_hash_function(gen, num_unique_elements, width);
+            signs[i] = generate_sign_function(gen, num_unique_elements);
         }
     }
 
@@ -45,7 +45,7 @@ struct CountSketch {
 
     vector<HashFun> hashes;
     vector<SignFun> signs;
-    Dataset& ds;
+    size_t num_unique_elements;
 };
 
 #endif

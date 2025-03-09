@@ -40,8 +40,8 @@ namespace moments {
 
             // Kahan summation algorithm
             long double term = value / probs[i];
-            double y = term - c;       // c is the running compensation
-            double t = sum + y;        // sum is big, y is small
+            long double y = term - c;       // c is the running compensation
+            long double t = sum + y;        // sum is big, y is small
             c = (t - sum) - y;        // (t - sum) cancels high-order bits of y
             // subtracting y recovers negative of low-order bits
             sum = t;                  // new sum

@@ -145,11 +145,10 @@ def generate_bucket_stats(buckets, freqs, p):
         if len(items) == 0:
             bucket_stats.append(None)
             continue
-        left, right = buckets[i] * len(df), buckets[i+1] * len(df)
+        left, right = buckets[i] * len(freqs), buckets[i+1] * len(freqs)
         S = items.sum()
 
-        nest = n_estimate_harm_avg(S, left, right)
-        pred = nest * (S / nest) ** p
+        pred = S * ((left + right) / 2) ** (p-1)
 
         bucket_stats.append((len(items), nest, np.sum(items ** p), pred))
     return bucket_stats
@@ -186,6 +185,57 @@ def print_bucket_stats(buckets, freqs, p, print_table=True):
     plt.scatter(np.arange(k), bucket_errors_rel)
     plt.show()
 
+
+# +
+def plot_per_key_error(buckets, est_freqs, counts, p, title, file_name):
+    k = len(buckets) - 1
+    N = np.sum(counts)
+    item_est = np.empty(len(counts))
+    item_counts = np.empty(len(counts))
+    curr_item = 0
+    
+    sorted_freqs = est_freqs.sort_values(ascending=True)
+    curr_bucket = 0
+    for item, freq in sorted_freqs.items():
+        while buckets[curr_bucket + 1] < freq:
+            curr_bucket += 1
+        left, right = buckets[curr_bucket] * N, buckets[curr_bucket + 1] * N
+        item_est[curr_item] = counts[item] * ((left + right) / 2) ** (p-1)
+        item_counts[curr_item] = counts[item]
+        curr_item += 1
+
+    item_real = item_counts ** p
+    item_err_abs = np.abs(item_est - item_real)
+    item_err_rel = (item_est - item_real) / item_real
+
+    fig, ax = plt.subplots(1, 2, sharex=True, figsize=(15, 5))
+    sns.scatterplot(ax=ax[0], x=item_counts / N, y=item_err_rel, alpha=0.5)
+    sns.scatterplot(ax=ax[1], x=item_counts / N, y=item_err_abs, alpha=0.5)
+
+    ax[0].set_xscale('log')
+    ax[1].set_yscale('log')
+
+    fig.supxlabel('Element Frequency (log-scale)', y=-0.05)
+    ax[0].set_ylabel('Relative Error')
+    ax[1].set_ylabel('Absolute Error (log-scale)')
+
+    fig.suptitle(title)
+
+    plt.savefig(f'figs/{file_name}', bbox_inches='tight')
+    plt.show()
+
+p = 3
+k = 1024
+buckets = expo_buckets(7, k)
+plot_per_key_error(buckets, rel_oracle_est(unique_freqs2, 0.05), unique_counts2, p,
+                  "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Relative Error Oracle",
+                  "3rd_moment_bucket_per_key_err_rel_aol")
+plot_per_key_error(buckets, abs_oracle_est(unique_freqs2, 0.001), unique_counts2, p,
+                  "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Absolute Error Oracle",
+                  "3rd_moment_bucket_per_key_err_abs_aol")
+plot_per_key_error(buckets, train_oracle_est(unique_freqs2, unique_freqs), unique_counts2, p,
+                  "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Train/Test Oracle",
+                  "3rd_moment_bucket_per_key_err_train_aol")
 
 # +
 p = 3

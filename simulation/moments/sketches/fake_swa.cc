@@ -50,7 +50,7 @@ tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
     random_device rd;
     mt19937 gen(rd());
 
-    SeedFun seed = generate_seed_function(gen, ds);
+    SeedFun seed = generate_seed_function(gen, ds.item_counts.size());
 
     // First, get top kh by oracle
     Heap<tuple<double, ItemId>> top_h(kh);

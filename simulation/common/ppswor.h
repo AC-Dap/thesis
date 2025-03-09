@@ -7,9 +7,9 @@
 using namespace std;
 
 struct PPSWOR {
-    PPSWOR(size_t k, size_t deg, Dataset& ds):
+    PPSWOR(size_t k, size_t deg, size_t num_unique_elements):
         // CountSketch: ep = 1/(2k), width = e/ep
-        k(k), deg(deg), cs(size_t(5.4366*k), k+1, ds), ds(ds) {
+        k(k), deg(deg), cs(size_t(5.4366*k), k+1, num_unique_elements), num_unique_elements(num_unique_elements) {
         reset_seed();
     }
 
@@ -29,10 +29,8 @@ struct PPSWOR {
         std::random_device rd;
         std::mt19937 gen(rd());
 
-        seed = generate_seed_function(gen, ds);
-        for(ItemId item = 0; item < ds.item_counts.size(); item++) {
-            if (ds.item_counts[item] == 0) continue;
-            
+        seed = generate_seed_function(gen, num_unique_elements);
+        for(ItemId item = 0; item < num_unique_elements; item++) {
             seed[item] = pow(seed[item], 1./deg);
         }
     }
@@ -41,7 +39,7 @@ struct PPSWOR {
     CountSketch cs;
 
     SeedFun seed;
-    Dataset& ds;
+    size_t num_unique_elements;
 };
 
 #endif

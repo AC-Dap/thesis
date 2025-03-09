@@ -24,6 +24,12 @@ namespace moments {
         function<Buckets()> bucket_gen,
         function<double(Buckets&, MockOracle&, Dataset&)> sketch,
         size_t nsims, MockOracle& o, Dataset& ds);
+
+    vector<double> run_n_parsimonious_bucket_sims(size_t k, function<Buckets()> bucket_gen,
+        MockOracle& o, size_t deg, size_t nsims, Dataset& ds);
+
+    vector<double> run_n_parsimonious_swa_sims(size_t kh, size_t kp, size_t k,
+                                           MockOracle &o, size_t deg, size_t nsims, Dataset &ds);
 }
 
 #endif

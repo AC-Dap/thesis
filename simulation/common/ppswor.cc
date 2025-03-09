@@ -15,11 +15,11 @@ tuple<vector<ItemId>, vector<double>, vector<double>> PPSWOR::sample() {
     vector<ItemId> items(k);
     vector<double> weights(k), probs(k);
 
-    auto tau = cs.estimate(hh[0]);
+    auto tau = max(1., cs.estimate(hh[0]));
     for(int i = 0; i < k; i++){
         auto s = hh[1 + i];
         auto est = cs.estimate(s);
-        auto sample_count = est * seed[s];
+        auto sample_count = max(1., est * seed[s]);
         auto sample_prob = 1 - exp(-pow(sample_count/tau, deg));
 
         items[i] = s;
