@@ -34,15 +34,15 @@ namespace threshold {
         __uint128_t exact_threshold = calculate_exact_threshold(ds, threshold);
 
         // PPSWOR
-        run_sims(
-            results, ks, total_trials,
-            "ppswor",
-            [&](size_t k, size_t n_trials) {
-                return run_n_ppswor_sims(k, threshold, n_trials, ds);
-            },
-            exact_threshold,
-            mode
-        );
+        // run_sims(
+        //     results, ks, total_trials,
+        //     "ppswor",
+        //     [&](size_t k, size_t n_trials) {
+        //         return run_n_ppswor_sims(k, threshold, n_trials, ds);
+        //     },
+        //     exact_threshold,
+        //     mode
+        // );
 
         // SWA
         for (auto *o: os) {

@@ -6,10 +6,11 @@
 #include "common/heap.h"
 
 Buckets generate_exponential_buckets(double min_freq, size_t k) {
-    double step_size = min_freq / k;
+    // 1 / step_size^(k-2) == min_freq => -(k-2) log(step_size) = log(min_freq) => step_size = exp(-log(min_freq)/(k-2))
+    double step_size = exp(-log(min_freq) / (k-2));
     Buckets buckets(k + 1, 0);
     for (int i = 0; i < k; i++) {
-        buckets[i] = pow(10., i * -step_size);
+        buckets[i] = 1. / pow(step_size, i);
     }
     reverse(buckets.begin(), buckets.end());
     return buckets;

@@ -40,6 +40,6 @@ int main(int argc, const char** argv) {
 
     // Run all sims
     FileWriteMode mode = SKIP;
-    threshold::run_all_sims(ds_test, os, total_trials, output_name, mode);
+    // threshold::run_all_sims(ds_test, os, total_trials, output_name, mode);
     moments::run_all_sims(ds_test, os, total_trials, output_name, mode);
 }

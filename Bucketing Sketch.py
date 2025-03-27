@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -20,20 +20,9 @@ from tqdm.notebook import tqdm, trange
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 import seaborn as sns
+from collections import Counter
 
 sns.set()
-
-# +
-### Load data
-df = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-01.txt', sep='\t')
-df['Query'] = df['Query'].fillna("")
-unique_counts = df['Query'].value_counts()
-unique_freqs = unique_counts / len(df)
-
-df2 = pd.read_csv('data/AOL-user-ct-collection/user-ct-test-collection-02.txt', sep='\t')
-df2['Query'] = df2['Query'].fillna("")
-unique_counts2 = df2['Query'].value_counts()
-unique_freqs2 = unique_counts2 / len(df2)
 
 
 # +
@@ -41,6 +30,26 @@ unique_freqs2 = unique_counts2 / len(df2)
 # print(unique_counts.head(), len(unique_counts))
 # print(unique_freqs.head())
 # print(unique_counts1[~unique_counts1.index.isin(unique_counts2.index)])
+
+# +
+### Load data
+def read_processed_data(file):
+    df = pd.read_csv(f'data/processed/{file}', names=['id'])
+    unique_counts = df['id'].value_counts()
+    unique_freqs = unique_counts / len(df)
+    return unique_counts, unique_freqs
+
+
+aol_train_counts, aol_train_freqs = read_processed_data('AOL/train.txt')
+aol_test_counts, aol_test_freqs = read_processed_data('AOL/test.txt')
+
+fake_0_1_train_counts, fake_0_1_train_freqs = read_processed_data('fake_0.1_dataset/train.txt')
+fake_0_1_test_counts, fake_0_1_test_freqs = read_processed_data('fake_0.1_dataset/test_1.txt')
+fake_0_3_train_counts, fake_0_3_train_freqs = read_processed_data('fake_0.3_dataset/train.txt')
+fake_0_3_test_counts, fake_0_3_test_freqs = read_processed_data('fake_0.3_dataset/test_1.txt')
+fake_0_5_train_counts, fake_0_5_train_freqs = read_processed_data('fake_0.5_dataset/train.txt')
+fake_0_5_test_counts, fake_0_5_test_freqs = read_processed_data('fake_0.5_dataset/test_1.txt')
+
 
 # +
 # Generate Buckets
@@ -80,7 +89,7 @@ def find_bucket_index(buckets, value):
         return 0
     return np.searchsorted(buckets, value, side='left') - 1
 
-def place_in_buckets(buckets, est_freqs):
+def place_in_buckets(buckets, est_freqs, true_counts):
     k = len(buckets) - 1
     filled_buckets = [[] for _ in range(k)]
 
@@ -89,7 +98,7 @@ def place_in_buckets(buckets, est_freqs):
     for item, freq in sorted_freqs.items():
         while buckets[curr_bucket + 1] < freq:
             curr_bucket += 1
-        filled_buckets[curr_bucket].append(unique_counts[item])
+        filled_buckets[curr_bucket].append(true_counts[item])
 
     for i in range(k):
         filled_buckets[i] = np.array(filled_buckets[i])
@@ -100,38 +109,82 @@ def place_in_buckets(buckets, est_freqs):
 # Helper Functions
 rng = np.random.default_rng()
 
-def rel_oracle_est(freqs, ep):
+def rel_oracle_est(freqs, ep, N):
     oracle_freqs = freqs.copy()
     err = rng.uniform(1-ep, 1+ep, len(freqs))
     i = 0
     for item, freq in oracle_freqs.items():
-        oracle_freqs[item] = min(1, max(0, err[i] * freq))
+        oracle_freqs[item] = min(1, max(1/N, err[i] * freq))
         i += 1
-    return oracle_freqs
+    return oracle_freqs / np.sum(oracle_freqs)
 
-def abs_oracle_est(freqs, ep):
+def abs_oracle_est(freqs, ep, N):
     oracle_freqs = freqs.copy()
     err = rng.uniform(-ep, ep, len(freqs))
     i = 0
     for item, freq in oracle_freqs.items():
-        oracle_freqs[item] = min(1, max(0, err[i] + freq))
+        oracle_freqs[item] = min(1, max(1/N, err[i] + freq))
         i += 1
-    return oracle_freqs
+    return oracle_freqs / np.sum(oracle_freqs)
 
-def train_oracle_est(freqs, train_freqs):
+def train_oracle_est(freqs, train_freqs, N):
     oracle_freqs = freqs.copy()
-    missing = np.min(train_freqs)
     for item, freq in oracle_freqs.items():
         if item in train_freqs:
             oracle_freqs[item] = train_freqs[item]
         else:
-            oracle_freqs[item] = missing
-    return oracle_freqs
+            oracle_freqs[item] = 1/N
+    return oracle_freqs / np.sum(oracle_freqs)
 
 def n_estimate_harm_avg(S, left, right):
     return max(1, np.round(2 * S / (left + right)))
 
 
+
+
+# +
+def bucket_counting_error(buckets, est_freqs, true_counts, p):
+    k = len(buckets) - 1
+    N = np.sum(true_counts)
+
+    bucket_count_est = np.zeros(k)
+    bucket_count_sum = np.zeros(k)
+    bucket_count_act = np.zeros(k)
+
+    curr_bucket = 0
+    est_freqs = np.maximum(est_freqs, 1/N)
+    est_freqs /= np.sum(est_freqs)
+    sorted_freqs = est_freqs.sort_values(ascending=True)
+    kl_div = 0
+    kl_div2 = 0
+    for item, f in sorted_freqs.items():
+        while buckets[curr_bucket + 1] < f:
+            curr_bucket += 1
+        bucket_count_act[curr_bucket] += 1
+        # bucket_count_est[curr_bucket] += true_counts[item] / (N * f)
+        bucket_count_sum[curr_bucket] += true_counts[item]
+
+        p = true_counts[item] / N
+        kl_div += f * np.log(f / p)
+        kl_div2 += p * np.log(p / f)
+
+    for i in range(k):
+        bucket_count_est[i] = bucket_count_sum[i] / (N*(buckets[i] + buckets[i+1])/2)
+
+    print(kl_div, kl_div2)
+    plt.scatter(bucket_count_act, bucket_count_est)
+    plt.plot([0, np.max(bucket_count_act)], [0, np.max(bucket_count_act)], 'r--')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.show()
+
+p = 3
+k = 1024
+buckets = expo_buckets(7, k)
+N = np.sum(fake_0_1_test_counts)
+bucket_counting_error(buckets, rel_oracle_est(fake_0_1_test_freqs, 0.05, N), fake_0_1_test_counts, p)
+bucket_counting_error(buckets, abs_oracle_est(fake_0_1_test_freqs, 0.001, N), fake_0_1_test_counts, p)
+bucket_counting_error(buckets, train_oracle_est(fake_0_1_test_freqs, fake_0_1_train_freqs, N), fake_0_1_test_counts, p)
 
 
 # +
@@ -226,14 +279,15 @@ def plot_per_key_error(buckets, est_freqs, counts, p, title, file_name):
 
 p = 3
 k = 1024
+N = np.sum(aol_test_counts)
 buckets = expo_buckets(7, k)
-plot_per_key_error(buckets, rel_oracle_est(unique_freqs2, 0.05), unique_counts2, p,
+plot_per_key_error(buckets, rel_oracle_est(aol_test_freqs, 0.05, N), aol_test_counts, p,
                   "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Relative Error Oracle",
                   "3rd_moment_bucket_per_key_err_rel_aol")
-plot_per_key_error(buckets, abs_oracle_est(unique_freqs2, 0.001), unique_counts2, p,
+plot_per_key_error(buckets, abs_oracle_est(aol_test_freqs, 0.001, N), aol_test_counts, p,
                   "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Absolute Error Oracle",
                   "3rd_moment_bucket_per_key_err_abs_aol")
-plot_per_key_error(buckets, train_oracle_est(unique_freqs2, unique_freqs), unique_counts2, p,
+plot_per_key_error(buckets, train_oracle_est(aol_test_freqs, aol_train_freqs, N), aol_test_counts, p,
                   "Per-Key Relative and Absolute Error for 3rd Frequency Moment on AOL Data, under the Train/Test Oracle",
                   "3rd_moment_bucket_per_key_err_train_aol")
 

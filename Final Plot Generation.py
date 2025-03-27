@@ -20,6 +20,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set()
+# -
+
+df = pd.read_csv("data/processed/AOL/test.txt", names=['id'])
+unique_counts = df['id'].value_counts()
+unique_freqs = unique_counts / len(df)
+prop_of_total = unique_counts ** 3 / np.sum(unique_counts**3)
+plt.plot(np.arange(len(prop_of_total)), prop_of_total)
+plt.xscale('log')
+plt.yscale('log')
 
 # +
 sim_folder = "simulation/results"
@@ -137,19 +146,19 @@ def plot_bucket_schemes(df, sample_sizes, title, file_name):
     plt.savefig(f'figs/{file_name}', bbox_inches='tight')
     plt.show()
 
-# plot_bucket_schemes(deg3_aol, 2 ** np.arange(6, 17),
-#                  "3rd Frequency Moment RMSPE on AOL data across bucketing schemes",
-#                  "3rd_moment_bucket_schemes_aol")
-# plot_bucket_schemes(deg4_aol, 2 ** np.arange(6, 17),
-#                  "4th Frequency Moment RMSPE on AOL data across bucketing schemes",
-#                  "4th_moment_bucket_schemes_aol")
+plot_bucket_schemes(deg3_aol, 2 ** np.arange(6, 17),
+                 "3rd Frequency Moment RMSPE on AOL data across bucketing schemes",
+                 "3rd_moment_bucket_schemes_aol")
+plot_bucket_schemes(deg4_aol, 2 ** np.arange(6, 17),
+                 "4th Frequency Moment RMSPE on AOL data across bucketing schemes",
+                 "4th_moment_bucket_schemes_aol")
 
-plot_bucket_schemes(deg3_caida, 2 ** np.arange(6, 17),
-                 "3rd Frequency Moment RMSPE on CAIDA data across bucketing schemes",
-                 "3rd_moment_bucket_schemes_caida")
-plot_bucket_schemes(deg4_caida, 2 ** np.arange(6, 17),
-                 "4th Frequency Moment RMSPE on CAIDA data across bucketing schemes",
-                 "4th_moment_bucket_schemes_caida")
+# plot_bucket_schemes(deg3_caida, 2 ** np.arange(6, 17),
+#                  "3rd Frequency Moment RMSPE on CAIDA data across bucketing schemes",
+#                  "3rd_moment_bucket_schemes_caida")
+# plot_bucket_schemes(deg4_caida, 2 ** np.arange(6, 17),
+#                  "4th Frequency Moment RMSPE on CAIDA data across bucketing schemes",
+#                  "4th_moment_bucket_schemes_caida")
 # plot_bucket_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
 # plot_bucket_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
 # plot_bucket_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
@@ -212,6 +221,12 @@ plot_bucket_top_kh(deg3_aol, 2 ** np.arange(6, 17),
 plot_bucket_top_kh(deg4_aol, 2 ** np.arange(6, 17),
                  "4th Frequency Moment RMSPE on AOL data with and without Top $k_h$ sample",
                  "4th_moment_bucket_top_kh_aol")
+# plot_bucket_top_kh(deg3_caida, 2 ** np.arange(6, 17),
+#                  "3rd Frequency Moment RMSPE on CAIDA data with and without Top $k_h$ sample",
+#                  "3rd_moment_bucket_top_kh_caida")
+# plot_bucket_top_kh(deg4_caida, 2 ** np.arange(6, 17),
+#                  "4th Frequency Moment RMSPE on CAIDA data with and without Top $k_h$ sample",
+#                  "4th_moment_bucket_top_kh_caida")
 # plot_bucket_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
 # plot_bucket_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
 # plot_bucket_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
@@ -225,7 +240,7 @@ def plot_bucket_swa(df, sample_sizes, title, file_name):
 
     for i, error_type in enumerate(error_types):
         central_results, central_exacts = read_sim_data(df, f"central_bucket_expo_{error_type}_k=k/2_kh=k/2")
-        # unbiased_results, unbiased_exacts = read_sim_data(df, f"unbiased_bucket_{error_type}_kh=k")
+        unbiased_results, unbiased_exacts = read_sim_data(df, f"unbiased_bucket_{error_type}_kh=k")
         counting_results, counting_exacts = read_sim_data(df, f"counting_bucket_expo_{error_type}_k=k/2_kh=k/2")
         sampling_results, sampling_exacts = read_sim_data(df, f"sampling_bucket_expo_{error_type}_k=k/32_ku=16_kh=k/2")
 
@@ -236,7 +251,7 @@ def plot_bucket_swa(df, sample_sizes, title, file_name):
         ppswor_results, ppswor_exacts = read_sim_data(df, "ppswor")
 
         plot_mse(ax[i], sample_sizes, central_results, central_exacts, "Central estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
-        # plot_mse(ax[i], sample_sizes, unbiased_results, unbiased_exacts, "Unbiased estimator:\n$k_h = k$")
+        plot_mse(ax[i], sample_sizes, unbiased_results, unbiased_exacts, "Unbiased estimator:\n$k_h = k$")
         plot_mse(ax[i], sample_sizes, counting_results, counting_exacts, "Counting estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
         plot_mse(ax[i], sample_sizes, sampling_results, sampling_exacts, "Sampling estimator:\n$B = \\frac{k}{32}, k_u = 16, k_h = \\frac{k}{2}$")
 
@@ -266,48 +281,48 @@ def plot_bucket_swa(df, sample_sizes, title, file_name):
     plt.savefig(f'figs/{file_name}', bbox_inches='tight')
     plt.show()
 
-# plot_bucket_swa(deg3_aol, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on AOL data",
-#                  "3rd_moment_bucket_swa_aol")
-# plot_bucket_swa(deg4_aol, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on AOL data",
-#                  "4th_moment_bucket_swa_aol")
-# plot_bucket_swa(deg3_0_1, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.1$ Synthetic data",
-#                  "3rd_moment_bucket_swa_syn_0_1")
-# plot_bucket_swa(deg4_0_1, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.1$ Synthetic data",
-#                  "4th_moment_bucket_swa_syn_0_1")
-# plot_bucket_swa(deg3_0_3, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.3$ Synthetic data",
-#                  "3rd_moment_bucket_swa_syn_0_3")
-# plot_bucket_swa(deg4_0_3, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.3$ Synthetic data",
-#                  "4th_moment_bucket_swa_syn_0_3")
-# plot_bucket_swa(deg3_0_5, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.5$ Synthetic data",
-#                  "3rd_moment_bucket_swa_syn_0_5")
-# plot_bucket_swa(deg4_0_5, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.5$ Synthetic data",
-#                  "4th_moment_bucket_swa_syn_0_5")
+plot_bucket_swa(deg3_aol, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on AOL data",
+                 "3rd_moment_bucket_swa_aol")
+plot_bucket_swa(deg4_aol, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on AOL data",
+                 "4th_moment_bucket_swa_aol")
+plot_bucket_swa(deg3_0_1, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.1$ Synthetic data",
+                 "3rd_moment_bucket_swa_syn_0_1")
+plot_bucket_swa(deg4_0_1, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.1$ Synthetic data",
+                 "4th_moment_bucket_swa_syn_0_1")
+plot_bucket_swa(deg3_0_3, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.3$ Synthetic data",
+                 "3rd_moment_bucket_swa_syn_0_3")
+plot_bucket_swa(deg4_0_3, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.3$ Synthetic data",
+                 "4th_moment_bucket_swa_syn_0_3")
+plot_bucket_swa(deg3_0_5, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on $\\alpha=0.5$ Synthetic data",
+                 "3rd_moment_bucket_swa_syn_0_5")
+plot_bucket_swa(deg4_0_5, 2 ** np.arange(6, 17),
+                 "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.5$ Synthetic data",
+                 "4th_moment_bucket_swa_syn_0_5")
 # plot_bucket_swa(deg3_caida, 2 ** np.arange(6, 17),
 #                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on CAIDA data",
 #                  "3rd_moment_bucket_swa_caida")
 # plot_bucket_swa(deg4_caida, 2 ** np.arange(6, 17),
 #                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on CAIDA data",
 #                  "4th_moment_bucket_swa_caida")
-plot_bucket_swa(threshold_aol, 2 ** np.arange(6, 13),
-                 "SWA vs. Bucketing sketch, Threshold RMSPE on AOL data",
-                 "threshold_bucket_swa_aol")
-plot_bucket_swa(threshold_caida, 2 ** np.arange(6, 13),
-                 "SWA vs. Bucketing sketch, Threshold RMSPE on CAIDA data",
-                 "threshold_bucket_swa_caida")
-plot_bucket_swa(threshold_0_1, 2 ** np.arange(6, 13),
-                 "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.1$ Synthetic data",
-                 "threshold_bucket_swa_0_1")
-plot_bucket_swa(threshold_0_3, 2 ** np.arange(6, 13),
-                 "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.3$ Synthetic data",
-                 "threshold_bucket_swa_0_3")
-plot_bucket_swa(threshold_0_5, 2 ** np.arange(6, 13),
-                 "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.5$ Synthetic data",
-                 "threshold_bucket_swa_0_5")
+# plot_bucket_swa(threshold_aol, 2 ** np.arange(6, 13),
+#                  "SWA vs. Bucketing sketch, Threshold RMSPE on AOL data",
+#                  "threshold_bucket_swa_aol")
+# plot_bucket_swa(threshold_caida, 2 ** np.arange(6, 13),
+#                  "SWA vs. Bucketing sketch, Threshold RMSPE on CAIDA data",
+#                  "threshold_bucket_swa_caida")
+# plot_bucket_swa(threshold_0_1, 2 ** np.arange(6, 13),
+#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.1$ Synthetic data",
+#                  "threshold_bucket_swa_0_1")
+# plot_bucket_swa(threshold_0_3, 2 ** np.arange(6, 13),
+#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.3$ Synthetic data",
+#                  "threshold_bucket_swa_0_3")
+# plot_bucket_swa(threshold_0_5, 2 ** np.arange(6, 13),
+#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.5$ Synthetic data",
+#                  "threshold_bucket_swa_0_5")

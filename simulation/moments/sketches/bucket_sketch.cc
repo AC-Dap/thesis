@@ -23,6 +23,7 @@ namespace moments {
         process_ds_to_buckets([&](ItemId item) {
             auto freq_est = o.estimate(item);
             size_t bucket_i = lower_bound(buckets.begin(), buckets.end(), freq_est) - buckets.begin();
+            if (bucket_i == 0) cout << "Warning: bucket_i is 0: " << freq_est << endl;
             bucket_counts[bucket_i - 1] += ds.item_counts[item];
         }, top_h, o, ds);
 

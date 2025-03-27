@@ -21,7 +21,7 @@ namespace moments {
     vector<double> run_n_swa_sims(size_t kh, size_t kp, size_t ku, MockOracle& o, size_t deg, size_t nsims, Dataset& ds);
 
     vector<double> run_n_bucket_sims(
-        function<Buckets()> bucket_gen,
+        function<Buckets(double)> bucket_gen,
         function<double(Buckets&, MockOracle&, Dataset&)> sketch,
         size_t nsims, MockOracle& o, Dataset& ds);
 

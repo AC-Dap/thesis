@@ -24,8 +24,6 @@ namespace moments {
             1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 15, 1 << 16
         };
 
-        constexpr size_t min_freq = 7;
-
         for (auto deg: degs) {
             // Load results
             string file_path = format("results/{}_moments_deg={}.csv", output_name, deg);
@@ -87,20 +85,21 @@ namespace moments {
                 );
             }
 
-            // Avg bucket estimators
-            vector<pair<function<Buckets(size_t)>, string> > bucket_types = {
-                {[&](size_t k) { return generate_exponential_buckets(min_freq, k); }, "expo"},
-                {generate_linear_buckets, "linear"}
-            };
-            for (auto &[bucket_gen, bucket_name]: bucket_types) {
-                for (auto *o: os) {
+            for (auto *o : os) {
+                vector<pair<function<Buckets(double, size_t)>, string> > bucket_types = {
+                    {generate_exponential_buckets, "expo"},
+                    {[&](double min_freq, size_t k) { return generate_linear_buckets(k);}, "linear"}
+                };
+
+                // Avg bucket estimators
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     // k 0
                     run_sims(
                         results, ks, total_trials,
                         format("central_bucket_{}_{}_k=k_kh=0", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -124,8 +123,8 @@ namespace moments {
                         results, ks, total_trials,
                         format("central_bucket_{}_{}_k=k/2_kh=k/2", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k / 2);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k / 2);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -144,15 +143,13 @@ namespace moments {
                         mode
                     );
                 }
-            }
 
-            for (auto *o: os) {
                 // k 0
                 run_sims(
                     results, ks, total_trials,
                     format("unbiased_bucket_{}_kh=0", o->name),
                     [&](size_t k, size_t n_trials) {
-                        auto buckets = [&] {
+                        auto buckets = [&](double min_freq) {
                             return generate_linear_buckets(1);
                         };
 
@@ -177,7 +174,7 @@ namespace moments {
                     results, ks, total_trials,
                     format("unbiased_bucket_{}_kh=k", o->name),
                     [&](size_t k, size_t n_trials) {
-                        auto buckets = [&] {
+                        auto buckets = [&](double min_freq) {
                             return generate_linear_buckets(1);
                         };
 
@@ -196,17 +193,15 @@ namespace moments {
                     exact_moment,
                     mode
                 );
-            }
 
-            for (auto &[bucket_gen, bucket_name]: bucket_types) {
-                for (auto *o: os) {
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     // k 0
                     run_sims(
                         results, ks, total_trials,
                         format("counting_bucket_{}_{}_k=k_kh=0", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -230,8 +225,8 @@ namespace moments {
                         results, ks, total_trials,
                         format("counting_bucket_{}_{}_k=k/2_kh=k/2", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k / 2);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k / 2);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -250,17 +245,15 @@ namespace moments {
                         mode
                     );
                 }
-            }
 
-            for (auto &[bucket_gen, bucket_name]: bucket_types) {
-                for (auto *o: os) {
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     // k 0
                     run_sims(
                         results, ks, total_trials,
                         format("sampling_bucket_{}_{}_k=k/16_ku=16_kh=0", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k / 16);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k / 16);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -284,8 +277,8 @@ namespace moments {
                         results, ks, total_trials,
                         format("sampling_bucket_{}_{}_k=k/32_ku=16_kh=k/2", bucket_name, o->name),
                         [&](size_t k, size_t n_trials) {
-                            auto buckets = [&] {
-                                return bucket_gen(k / 32);
+                            auto buckets = [&](double min_freq) {
+                                return bucket_gen(min_freq, k / 32);
                             };
 
                             auto sketch = [&](Buckets &b, MockOracle &o, Dataset &ds) {
@@ -365,16 +358,23 @@ namespace moments {
     }
 
     vector<double> run_n_bucket_sims(
-        const function<Buckets()> bucket_gen,
+        const function<Buckets(double)> bucket_gen,
         const function<double(Buckets &, MockOracle &, Dataset &)> sketch,
         size_t nsims, MockOracle &o, Dataset &ds) {
         auto t1 = chrono::high_resolution_clock::now();
 
-        Buckets b = bucket_gen();
-
         vector<double> estimates(nsims);
         for (int i = 0; i < nsims; i++) {
             o.reset_estimates();
+
+            double min_freq = 1;
+            for (ItemId item = 0; item < ds.item_counts.size(); item++) {
+                if (ds.item_counts[item] > 0) {
+                    if (o.estimates[item] == 0) o.estimates[item] = 1e-9;
+                    min_freq = min(min_freq, o.estimates[item]);
+                }
+            }
+            Buckets b = bucket_gen(min_freq);
 
             estimates[i] = sketch(b, o, ds);
 

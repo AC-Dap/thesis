@@ -9,7 +9,7 @@ using namespace std;
 struct PPSWOR {
     PPSWOR(size_t k, size_t deg, size_t num_unique_elements):
         // CountSketch: ep = 1/(2k), width = e/ep
-        k(k), deg(deg), cs(size_t(5.4366*k), k+1, num_unique_elements), num_unique_elements(num_unique_elements) {
+        k(k/16), deg(deg), cs(size_t(15. * k / 16. / 7.), k/16 + 1, num_unique_elements), num_unique_elements(num_unique_elements) {
         reset_seed();
     }
 

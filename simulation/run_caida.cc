@@ -71,8 +71,6 @@ vector<double> run_caida_moment_swa(size_t kh, size_t kp, size_t ku, MockOracle 
 
     vector<double> estimates(10);
     for(int i = 0; i < 10; i++){
-        o.reset_estimates();
-
         // Read in a and b
         ds.clear();
         ds.add_from_file("../data/processed/CAIDA/" + to_string(1 + i) + ".txt");
@@ -143,8 +141,6 @@ vector<double> run_caida_threshold_swa(size_t kh, size_t kp, size_t ku, MockOrac
 
     vector<double> estimates(10);
     for(int i = 0; i < 10; i++){
-        o.reset_estimates();
-
         // Read in a and b
         ds.clear();
         ds.add_from_file("../data/processed/CAIDA/" + to_string(1 + i) + ".txt");
@@ -171,8 +167,6 @@ vector<double> run_caida_buckets(Buckets& b, const function<double(Buckets &, Mo
 
     vector<double> estimates(10);
     for(int i = 0; i < 10; i++){
-        o.reset_estimates();
-
         // Read in a and b
         ds.clear();
         ds.add_from_file("../data/processed/CAIDA/" + to_string(1 + i) + ".txt");
@@ -206,11 +200,8 @@ int main(int argc, const char** argv) {
     ExactOracle o_train("train", ds_train);
     vector<MockOracle*> os = {&o_abs, &o_rel, &o_train};
 
-    // Set up signal handler
-    signal(SIGINT, signal_handler);
-
     // Run all sims
-    run_caida_threshold_sims(os, "caida");
+    // run_caida_threshold_sims(os, "caida");
     run_caida_moment_sims(os, "caida");
 }
 
@@ -219,8 +210,6 @@ void run_caida_moment_sims(vector<MockOracle*> &os, string output_name) {
     vector<size_t> ks = {
         1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 15, 1 << 16
     };
-
-    constexpr size_t min_freq = 7;
 
     for (auto deg: degs) {
         // Load results
@@ -245,37 +234,50 @@ void run_caida_moment_sims(vector<MockOracle*> &os, string output_name) {
             exact_moments[i] = moments::calculate_exact_moment(ds, deg);
         }
 
-        // PPSWOR
+        for (auto k: ks) {
+            // PPSWOR
+            // auto estimates = run_caida_moment_ppswor(1 << 10, deg);
+            // for(int i = 0; i < 10; i++){
+            //     results.add_result("ppswor", k, i + 1, estimates[i], exact_moments[i]);
+            // }
+
+            // SWA
+            // for (auto *o: os) {
+            //     auto estimates1 = run_caida_moment_swa(0, k, 0, *o, deg);
+            //     auto estimates2 = run_caida_moment_swa(k / 2, k / 2, 0, *o, deg);
+            //     auto estimates3 = run_caida_moment_swa(k / 2, k / 4, k / 4, *o, deg);
+            //
+            //     for(int i = 0; i < 10; i++){
+            //         results.add_result("swa_" + o->name + "_kh=0_kp=k_ku=0", k, i + 1, estimates1[i], exact_moments[i]);
+            //         results.add_result("swa_" + o->name + "_kh=k/2_kp=k/2_ku=0", k, i + 1, estimates2[i], exact_moments[i]);
+            //         results.add_result("swa_" + o->name + "_kh=k/2_kp=k/4_ku=k/4", k, i + 1, estimates3[i], exact_moments[i]);
+            //     }
+            // }
+        }
+
+        cout << "Bucketing sketches:" << endl;
         for (auto k : ks) {
-            auto estimates = run_caida_moment_ppswor(1 << 10, deg);
-            for(int i = 0; i < 10; i++){
-                results.add_result("ppswor", k, i + 1, estimates[i], exact_moments[i]);
-            }
-        }
+            for (auto *o : os) {
+                o->reset_estimates();
 
-        // SWA
-        for (auto *o: os) {
-            for (auto k: ks) {
-                auto estimates1 = run_caida_moment_swa(0, k, 0, *o, deg);
-                auto estimates2 = run_caida_moment_swa(k / 2, k / 2, 0, *o, deg);
-                auto estimates3 = run_caida_moment_swa(k / 2, k / 4, k / 4, *o, deg);
-
-                for(int i = 0; i < 10; i++){
-                    results.add_result("swa_" + o->name + "_kh=0_kp=k_ku=0", k, i + 1, estimates1[i], exact_moments[i]);
-                    results.add_result("swa_" + o->name + "_kh=k/2_kp=k/2_ku=0", k, i + 1, estimates2[i], exact_moments[i]);
-                    results.add_result("swa_" + o->name + "_kh=k/2_kp=k/4_ku=k/4", k, i + 1, estimates3[i], exact_moments[i]);
+                double min_freq = 1;
+                for (ItemId item = 0; item < ds.item_counts.size(); item++) {
+                    if (o->estimates[item] == 0) o->estimates[item] = 1e-9;
+                    min_freq = min(min_freq, o->estimates[item]);
                 }
-            }
-        }
+                if (min_freq == 0) {
+                    cerr << "Warning: min_freq is 0" << endl;
+                    return;
+                }
 
-        // Central estimator
-        vector<pair<function<Buckets(size_t)>, string> > bucket_types = {
-            {[&](size_t k) { return generate_exponential_buckets(min_freq, k); }, "expo"},
-            {generate_linear_buckets, "linear"}
-        };
-        for (auto &[bucket_gen, bucket_name]: bucket_types) {
-            for (auto *o: os) {
-                for (auto k : ks) {
+                vector<pair<function<Buckets(size_t)>, string> > bucket_types = {
+                    {[&](size_t k) { return generate_exponential_buckets(min_freq, k); }, "expo"},
+                    {generate_linear_buckets, "linear"}
+                };
+
+                cout << "Running for k = " << k << ", oracle = " << o->name << endl;
+                // Central estimator
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     Buckets b = bucket_gen(k);
                     auto estimates = run_caida_buckets(b, [&](Buckets &b, MockOracle &o, Dataset &ds) {
                         return moments::central_bucket_sketch(0, deg, b, o, ds);
@@ -291,14 +293,9 @@ void run_caida_moment_sims(vector<MockOracle*> &os, string output_name) {
                         results.add_result("central_bucket_" + bucket_name + "_" + o->name + "_k=k/2_kh=k/2", k, i + 1, estimates2[i], exact_moments[i]);
                     }
                 }
-            }
-        }
 
-        // Unbiased estimator
-        for (auto *o: os) {
-            for (auto k: ks) {
+                // Unbiased estimator
                 Buckets b = generate_linear_buckets(1);
-
                 auto estimates1 = run_caida_buckets(b, [&](Buckets &b, MockOracle &o, Dataset &ds) {
                     return moments::unbiased_bucket_sketch(0, deg, b, o, ds);
                 }, *o);
@@ -310,13 +307,9 @@ void run_caida_moment_sims(vector<MockOracle*> &os, string output_name) {
                     results.add_result("unbiased_bucket_" + o->name + "_kh=0", k, i + 1, estimates1[i], exact_moments[i]);
                     results.add_result("unbiased_bucket_" + o->name + "_kh=k", k, i + 1, estimates2[i], exact_moments[i]);
                 }
-            }
-        }
 
-        // Counting estimator
-        for (auto &[bucket_gen, bucket_name]: bucket_types) {
-            for (auto *o: os) {
-                for (auto k : ks) {
+                // Counting estimator
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     Buckets b = bucket_gen(k);
                     auto estimates = run_caida_buckets(b, [&](Buckets &b, MockOracle &o, Dataset &ds) {
                         return moments::counting_bucket_sketch(0, deg, b, o, ds);
@@ -332,13 +325,9 @@ void run_caida_moment_sims(vector<MockOracle*> &os, string output_name) {
                         results.add_result("counting_bucket_" + bucket_name + "_" + o->name + "_k=k/2_kh=k/2", k, i + 1, estimates2[i], exact_moments[i]);
                     }
                 }
-            }
-        }
 
-        // Sampling estimator
-        for (auto &[bucket_gen, bucket_name]: bucket_types) {
-            for (auto *o: os) {
-                for (auto k : ks) {
+                // Sampling estimator
+                for (auto &[bucket_gen, bucket_name]: bucket_types) {
                     Buckets b = bucket_gen(k / 16);
                     auto estimates = run_caida_buckets(b, [&](Buckets &b, MockOracle &o, Dataset &ds) {
                         return moments::sampling_bucket_sketch(0, 16, deg, b, o, ds);
@@ -390,13 +379,13 @@ void run_caida_threshold_sims(vector<MockOracle*> &os, string output_name) {
     }
 
     // PPSWOR
-    cout << "PPSWOR:" << endl;
-    for (auto k : ks) {
-        auto estimates = run_caida_threshold_ppswor(1 << 10, threshold);
-        for(int i = 0; i < 10; i++){
-            results.add_result("ppswor", k, i + 1, estimates[i], exact_threshold[i]);
-        }
-    }
+    // cout << "PPSWOR:" << endl;
+    // for (auto k : ks) {
+    //     auto estimates = run_caida_threshold_ppswor(1 << 10, threshold);
+    //     for(int i = 0; i < 10; i++){
+    //         results.add_result("ppswor", k, i + 1, estimates[i], exact_threshold[i]);
+    //     }
+    // }
 
     // SWA
     cout << "SWA:" << endl;

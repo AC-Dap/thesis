@@ -76,10 +76,15 @@ tuple<vector<ItemId>, vector<double>, vector<double>> fake_swa_sample(
         s[kh + i] = item;
         weights[kh + i] = ds.item_counts[item];
         probs[kh + i] = 1 - exp(-pow(oracle.estimate(item) / tau, deg));
-        item_counts_copy[item] = 0;
     }
 
-    // Get top ku by weighted sample in remaining items
+    // Get top ku by weighted sample for those estimates with o(x) == 0
+    for (ItemId item = 0; item < kh; item++) {
+        if (oracle.estimate(item) > 0) {
+            item_counts_copy[item] = 0;
+        }
+    }
+
     Heap<tuple<double, ItemId>> top_u(ku + 1);
     get_top_items(top_u, item_counts_copy, [&](ItemId item) { return -seed[item]; });
 
