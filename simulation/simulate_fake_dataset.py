@@ -62,6 +62,5 @@ if __name__ == "__main__":
             df.loc[mask, "n_trial"] = i
             df.to_csv(csv_name, index=False)
 
-        update_trial_numbers(f"results/{output_name}_threshold.csv")
         update_trial_numbers(f"results/{output_name}_moments_deg=3.csv")
         update_trial_numbers(f"results/{output_name}_moments_deg=4.csv")

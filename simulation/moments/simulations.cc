@@ -49,14 +49,12 @@ namespace moments {
 
             // SWA
             for (auto *o: os) {
-                if (o->name == "exact") continue;
-
                 // 0 k 0
                 run_sims(
                     results, ks, total_trials,
-                    format("swa_{}_kh=0_kp=k_ku=0", o->name),
+                    format("swa_{}_kh=0_kp=k_ku=16", o->name),
                     [&](size_t k, size_t n_trials) {
-                        return run_n_swa_sims(0, k, 0, *o, deg, n_trials, ds);
+                        return run_n_swa_sims(0, k, 16, *o, deg, n_trials, ds);
                     },
                     exact_moment,
                     mode
@@ -65,9 +63,9 @@ namespace moments {
                 // k/2 k/2 0
                 run_sims(
                     results, ks, total_trials,
-                    format("swa_{}_kh=k/2_kp=k/2_ku=0", o->name),
+                    format("swa_{}_kh=k/2_kp=k/2_ku=16", o->name),
                     [&](size_t k, size_t n_trials) {
-                        return run_n_swa_sims(k / 2, k / 2, 0, *o, deg, n_trials, ds);
+                        return run_n_swa_sims((k-16) / 2, (k-16) / 2, 16, *o, deg, n_trials, ds);
                     },
                     exact_moment,
                     mode

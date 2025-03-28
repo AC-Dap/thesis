@@ -15,11 +15,15 @@
 # %%
 import pandas as pd
 import numpy as np
+import os
 import sys
 
 
 # %%
 def process_fake_dataset(folder):
+    if os.path.exists(f"processed/{folder}/mapping.txt"):
+        return
+    
     files = ['train.txt'] + [f'test_{i}.txt' for i in range(1, 11)]
     mapping = {}
     nextId = 0

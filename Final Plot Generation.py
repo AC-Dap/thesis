@@ -257,9 +257,9 @@ def plot_bucket_swa(df, sample_sizes, title, file_name):
         counting_results, counting_exacts = read_sim_data(df, f"counting_bucket_expo_{error_type}_k=k/2_kh=k/2")
         sampling_results, sampling_exacts = read_sim_data(df, f"sampling_bucket_expo_{error_type}_k=k/32_ku=16_kh=k/2")
 
-        swa_results1, swa_exacts3 = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k_ku=0")
-        swa_results2, swa_exacts2 = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=0")
-        swa_results3, swa_exacts1 = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/4_ku=k/4")
+        swa_results1, swa_exacts1 = read_sim_data(df, f"swa_{error_type}_kh=0_kp=k_ku=16")
+        swa_results2, swa_exacts2 = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/2_ku=16")
+        swa_results3, swa_exacts3 = read_sim_data(df, f"swa_{error_type}_kh=k/2_kp=k/4_ku=k/4")
 
         ppswor_results, ppswor_exacts = read_sim_data(df, "ppswor")
 
@@ -268,8 +268,8 @@ def plot_bucket_swa(df, sample_sizes, title, file_name):
         plot_mse(ax[i], sample_sizes, counting_results, counting_exacts, "Counting estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
         plot_mse(ax[i], sample_sizes, sampling_results, sampling_exacts, "Sampling estimator:\n$B = \\frac{k}{32}, k_u = 16, k_h = \\frac{k}{2}$")
 
-        plot_mse(ax[i], sample_sizes, swa_results1, swa_exacts1, "SWA estimator:\n$k_h = 0, k_p = k, k_u = 0$")
-        plot_mse(ax[i], sample_sizes, swa_results2, swa_exacts2, "SWA estimator:\n$k_h = \\frac{k}{2}, k_p = \\frac{k}{2}, k_u = 0$")
+        plot_mse(ax[i], sample_sizes, swa_results1, swa_exacts1, "SWA estimator:\n$k_h = 0, k_p = k - 16, k_u = 16$")
+        plot_mse(ax[i], sample_sizes, swa_results2, swa_exacts2, "SWA estimator:\n$k_h = \\frac{k-16}{2}, k_p = \\frac{k-16}{2}, k_u = 16$")
         plot_mse(ax[i], sample_sizes, swa_results3, swa_exacts3, "SWA estimator:\n$k_h = \\frac{k}{2}, k_p = \\frac{k}{4}, k_u = \\frac{k}{4}$")
 
         plot_mse(ax[i], sample_sizes, ppswor_results, ppswor_exacts, "PPSWOR")
