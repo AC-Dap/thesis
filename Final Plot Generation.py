@@ -20,15 +20,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set()
-# -
-
-df = pd.read_csv("data/processed/AOL/test.txt", names=['id'])
-unique_counts = df['id'].value_counts()
-unique_freqs = unique_counts / len(df)
-prop_of_total = unique_counts ** 3 / np.sum(unique_counts**3)
-plt.plot(np.arange(len(prop_of_total)), prop_of_total)
-plt.xscale('log')
-plt.yscale('log')
 
 # +
 sim_folder = "simulation/results"
@@ -38,12 +29,6 @@ deg3_0_1, deg4_0_1 = pd.read_csv(f"{sim_folder}/fake_0.1_moments_deg=3.csv"), pd
 deg3_0_3, deg4_0_3 = pd.read_csv(f"{sim_folder}/fake_0.3_moments_deg=3.csv"), pd.read_csv(f"{sim_folder}/fake_0.3_moments_deg=4.csv")
 deg3_0_5, deg4_0_5 = pd.read_csv(f"{sim_folder}/fake_0.5_moments_deg=3.csv"), pd.read_csv(f"{sim_folder}/fake_0.5_moments_deg=4.csv")
 deg3_caida, deg4_caida = pd.read_csv(f"{sim_folder}/caida_moments_deg=3.csv"), pd.read_csv(f"{sim_folder}/caida_moments_deg=4.csv")
-
-threshold_aol = pd.read_csv(f"{sim_folder}/aol_threshold.csv")
-threshold_0_1 = pd.read_csv(f"{sim_folder}/fake_0.1_threshold.csv")
-threshold_0_3 = pd.read_csv(f"{sim_folder}/fake_0.3_threshold.csv")
-threshold_0_5 = pd.read_csv(f"{sim_folder}/fake_0.5_threshold.csv")
-threshold_caida = pd.read_csv(f"{sim_folder}/caida_threshold.csv")
 
 
 # +
@@ -68,24 +53,13 @@ def error_prefix(err):
 
 
 # +
-def plot_curve(ax, x, results, true_value, label, color):
-    error = (results - true_value) / true_value
-    mean = np.mean(error, axis=1)
-    lower = np.min(error, axis=1)
-    upper = np.max(error, axis=1)
+def plot_abs_curve(ax, x, results, true_value, label):
+    error = np.abs((results - true_value) / true_value)
+    error = np.max(error, axis=1)
     
-    ax.plot(x, mean, label=label, color=color)
-    ax.fill_between(x, lower, upper, color=color, alpha=0.2)
-    ax.legend()
-
-def plot_abs_curve(ax, x, results, true_value, label, color):
-    error = (results - true_value) / true_value
-    mean = np.mean(np.abs(error), axis=1)
-    upper = np.max(np.abs(error), axis=1)
-    
-    ax.plot(x, mean, label=label, color=color)
-    ax.fill_between(x, mean, upper, color=color, alpha=0.2)
-    ax.legend()
+    markers = ['o', 's', '^', 'd']
+    marker = markers[hash(label) % len(markers)]
+    sns.lineplot(ax=ax, x=x, y=error, linestyle="dashed", marker=marker, label=label, legend=False)
 
 def plot_mse(ax, x, results, true_value, label):
     mse = np.sqrt(np.mean(((results - true_value) / true_value)**2, axis=1))
@@ -93,8 +67,6 @@ def plot_mse(ax, x, results, true_value, label):
     markers = ['o', 's', '^', 'd']
     marker = markers[hash(label) % len(markers)]
     sns.lineplot(ax=ax, x=x, y=mse, linestyle="dashed", marker=marker, label=label, legend=False)
-    # ax.errorbar(x, mse, y_err=(mse - 
-    # ax.plot(x, mse, linestyle="dashed", marker="o", label=label)
 
 
 # +
@@ -153,15 +125,64 @@ plot_bucket_schemes(deg4_aol, 2 ** np.arange(6, 17),
                  "4th Frequency Moment RMSPE on AOL data across bucketing schemes",
                  "4th_moment_bucket_schemes_aol")
 
-# plot_bucket_schemes(deg3_caida, 2 ** np.arange(6, 17),
-#                  "3rd Frequency Moment RMSPE on CAIDA data across bucketing schemes",
-#                  "3rd_moment_bucket_schemes_caida")
-# plot_bucket_schemes(deg4_caida, 2 ** np.arange(6, 17),
-#                  "4th Frequency Moment RMSPE on CAIDA data across bucketing schemes",
-#                  "4th_moment_bucket_schemes_caida")
-# plot_bucket_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-# plot_bucket_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-# plot_bucket_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
+# +
+# Error bound
+
+def plot_bucket_error_bound(df, d, N, sample_sizes, title, file_name):
+    fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(8, 5))
+    error_types = ["rel_0.05"]
+
+    central_results1, central_exacts1 = read_sim_data(df, f"central_bucket_expo_rel_0.05_k=k_kh=0")
+    central_results2, central_exacts2 = read_sim_data(df, f"central_bucket_expo_rel_0.05_k=k/2_kh=k/2")
+
+    unbiased_results1, unbiased_exacts1 = read_sim_data(df, f"unbiased_bucket_rel_0.05_kh=0")
+    unbiased_results2, unbiased_exacts2 = read_sim_data(df, f"unbiased_bucket_rel_0.05_kh=k")
+
+    counting_results1, counting_exacts1 = read_sim_data(df, f"counting_bucket_expo_rel_0.05_k=k_kh=0")
+    counting_results2, counting_exacts2 = read_sim_data(df, f"counting_bucket_expo_rel_0.05_k=k/2_kh=k/2")
+
+    sampling_results1, sampling_exacts1 = read_sim_data(df, f"sampling_bucket_expo_rel_0.05_k=k/16_ku=16_kh=0")
+    sampling_results2, sampling_exacts2 = read_sim_data(df, f"sampling_bucket_expo_rel_0.05_k=k/32_ku=16_kh=k/2")
+
+    plot_abs_curve(ax, sample_sizes, central_results1, central_exacts1, "Central estimator:\n$B = k, k_h = 0$")
+    plot_abs_curve(ax, sample_sizes, central_results2, central_exacts2, "Central estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+    plot_abs_curve(ax, sample_sizes, unbiased_results1, unbiased_exacts1, "Unbiased estimator:\n$k_h = 0$")
+    plot_abs_curve(ax, sample_sizes, unbiased_results2, unbiased_exacts2, "Unbiased estimator:\n$k_h = k$")
+    
+    plot_abs_curve(ax, sample_sizes, counting_results1, counting_exacts1, "Counting estimator:\n$B = k, k_h = 0$")
+    plot_abs_curve(ax, sample_sizes, counting_results2, counting_exacts2, "Counting estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+    
+    plot_abs_curve(ax, sample_sizes, sampling_results1, sampling_exacts1, "Sampling estimator:\n$B = \\frac{k}{16}, k_u = 16, k_h = 0$")
+    plot_abs_curve(ax, sample_sizes, sampling_results2, sampling_exacts2, "Sampling estimator:\n$B = \\frac{k}{32}, k_u = 16, k_h = \\frac{k}{2}$")
+
+    delta = 0.05
+    gamma = np.exp(-np.log(0.95 / N) / (sample_sizes-2))
+    ax.plot(sample_sizes, np.maximum(1 - ((1+gamma)*(1-delta)/(2*gamma))**(d-1), ((1+gamma)*(1+delta)/2)**(d-1) - 1), label="Error bound")
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+
+    ax.set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+
+    fig.supxlabel('Space size', y=-0.1)
+    fig.supylabel('Maximum absolute Error (log-scale)')
+
+    fig.suptitle(title)
+
+    fig.legend(*ax.get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+
+    plt.savefig(f'figs/{file_name}', bbox_inches='tight')
+    plt.show()
+
+plot_bucket_error_bound(deg3_aol, 3, 3614506, 2 ** np.arange(6, 17),
+                 "3rd Frequency Moment Absolute Error on AOL data, with theoretical error bound",
+                 "3rd_moment_bucket_bound_aol")
+plot_bucket_error_bound(deg4_aol, 4, 3614506, 2 ** np.arange(6, 17),
+                 "4th Frequency Moment Absolute Error on AOL data, with theoretical error bound",
+                 "4th_moment_bucket_bound_aol")
+
 
 # +
 # Top k_h
@@ -221,15 +242,7 @@ plot_bucket_top_kh(deg3_aol, 2 ** np.arange(6, 17),
 plot_bucket_top_kh(deg4_aol, 2 ** np.arange(6, 17),
                  "4th Frequency Moment RMSPE on AOL data with and without Top $k_h$ sample",
                  "4th_moment_bucket_top_kh_aol")
-# plot_bucket_top_kh(deg3_caida, 2 ** np.arange(6, 17),
-#                  "3rd Frequency Moment RMSPE on CAIDA data with and without Top $k_h$ sample",
-#                  "3rd_moment_bucket_top_kh_caida")
-# plot_bucket_top_kh(deg4_caida, 2 ** np.arange(6, 17),
-#                  "4th Frequency Moment RMSPE on CAIDA data with and without Top $k_h$ sample",
-#                  "4th_moment_bucket_top_kh_caida")
-# plot_bucket_nrmse(threshold_fake_0_1, 'Synthetic $\\alpha=0.1$', 'fake_0_1')
-# plot_bucket_nrmse(threshold_fake_0_3, 'Synthetic $\\alpha=0.3$', 'fake_0_3')
-# plot_bucket_nrmse(threshold_fake_0_5, 'Synthetic $\\alpha=0.5$', 'fake_0_5')
+
 
 # +
 # Top k_h
@@ -305,24 +318,57 @@ plot_bucket_swa(deg3_0_5, 2 ** np.arange(6, 17),
 plot_bucket_swa(deg4_0_5, 2 ** np.arange(6, 17),
                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on $\\alpha=0.5$ Synthetic data",
                  "4th_moment_bucket_swa_syn_0_5")
-# plot_bucket_swa(deg3_caida, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 3rd Frequency Moment RMSPE on CAIDA data",
-#                  "3rd_moment_bucket_swa_caida")
-# plot_bucket_swa(deg4_caida, 2 ** np.arange(6, 17),
-#                  "SWA vs. Bucketing sketch, 4th Frequency Moment RMSPE on CAIDA data",
-#                  "4th_moment_bucket_swa_caida")
-# plot_bucket_swa(threshold_aol, 2 ** np.arange(6, 13),
-#                  "SWA vs. Bucketing sketch, Threshold RMSPE on AOL data",
-#                  "threshold_bucket_swa_aol")
-# plot_bucket_swa(threshold_caida, 2 ** np.arange(6, 13),
-#                  "SWA vs. Bucketing sketch, Threshold RMSPE on CAIDA data",
-#                  "threshold_bucket_swa_caida")
-# plot_bucket_swa(threshold_0_1, 2 ** np.arange(6, 13),
-#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.1$ Synthetic data",
-#                  "threshold_bucket_swa_0_1")
-# plot_bucket_swa(threshold_0_3, 2 ** np.arange(6, 13),
-#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.3$ Synthetic data",
-#                  "threshold_bucket_swa_0_3")
-# plot_bucket_swa(threshold_0_5, 2 ** np.arange(6, 13),
-#                  "SWA vs. Bucketing sketch, Threshold RMSPE on $\\alpha=0.5$ Synthetic data",
-#                  "threshold_bucket_swa_0_5")
+
+
+# +
+# CAIDA
+
+def plot_bucket_caida(df, sample_sizes, title, file_name):
+    fig, ax = plt.subplots(1, 3, sharex=True, sharey=True, figsize=(15, 5))
+    error_types = ["rel_0.05", "abs_0.001", "train"]
+
+    for i, error_type in enumerate(error_types):
+        central_results1, central_exacts1 = read_sim_data(df, f"central_bucket_expo_{error_type}_k=k_kh=0")
+        central_results2, central_exacts2 = read_sim_data(df, f"central_bucket_expo_{error_type}_k=k/2_kh=k/2")
+
+        unbiased_results1, unbiased_exacts1 = read_sim_data(df, f"unbiased_bucket_{error_type}_kh=0")
+        unbiased_results2, unbiased_exacts2 = read_sim_data(df, f"unbiased_bucket_{error_type}_kh=k")
+
+        counting_results1, counting_exacts1 = read_sim_data(df, f"counting_bucket_expo_{error_type}_k=k_kh=0")
+        counting_results2, counting_exacts2 = read_sim_data(df, f"counting_bucket_expo_{error_type}_k=k/2_kh=k/2")
+
+        plot_mse(ax[i], sample_sizes, central_results1, central_exacts1, "Central estimator:\n$B = k, k_h = 0$")
+        plot_mse(ax[i], sample_sizes, central_results2, central_exacts2, "Central estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+
+        plot_mse(ax[i], sample_sizes, unbiased_results1, unbiased_exacts1, "Unbiased estimator:\n$k_h = 0$")
+        plot_mse(ax[i], sample_sizes, unbiased_results2, unbiased_exacts2, "Unbiased estimator:\n$k_h = k$")
+        
+        plot_mse(ax[i], sample_sizes, counting_results1, counting_exacts1, "Counting estimator:\n$B = k, k_h = 0$")
+        plot_mse(ax[i], sample_sizes, counting_results2, counting_exacts2, "Counting estimator:\n$B = \\frac{k}{2}, k_h = \\frac{k}{2}$")
+        
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+
+    ax[0].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[1].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+    ax[2].set_xticks(sample_sizes, sample_sizes, rotation='vertical')
+
+    fig.supxlabel('Space size', y=-0.1)
+    fig.supylabel('RMSPE (log-scale)')
+
+    fig.suptitle(title)
+    ax[0].set_title("Relative error")
+    ax[1].set_title("Absolute error")
+    ax[2].set_title("Train/test error")
+
+    fig.legend(*ax[0].get_legend_handles_labels(), bbox_to_anchor=(0.9, 0.5), loc='center left')
+
+    plt.savefig(f'figs/{file_name}', bbox_inches='tight')
+    plt.show()
+
+plot_bucket_caida(deg3_caida, 2 ** np.arange(6, 17),
+                 "3rd Frequency Moment RMSPE on CAIDA data",
+                 "3rd_moment_bucket_caida")
+plot_bucket_caida(deg4_caida, 2 ** np.arange(6, 17),
+                 "4th Frequency Moment RMSPE on CAIDA data",
+                 "4th_moment_bucket_caida")
