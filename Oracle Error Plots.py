@@ -53,18 +53,24 @@ def rel_oracle_est(freqs, ep, N):
     err = rng.uniform(1-ep, 1+ep, len(freqs))
     i = 0
     for item, freq in oracle_freqs.items():
-        oracle_freqs[item] = min(1, max(1/N, err[i] * freq))
+        new_freq = min(1, max(0, err[i] * freq))
+        if new_freq == 0:
+            new_freq = 1e-9
+        oracle_freqs[item] = new_freq
         i += 1
-    return oracle_freqs / np.sum(oracle_freqs)
+    return oracle_freqs
 
 def abs_oracle_est(freqs, ep, N):
     oracle_freqs = freqs.copy()
     err = rng.uniform(-ep, ep, len(freqs))
     i = 0
     for item, freq in oracle_freqs.items():
-        oracle_freqs[item] = min(1, max(1/N, err[i] + freq))
+        new_freq = min(1, max(0, err[i] + freq))
+        if new_freq == 0:
+            new_freq = 1e-9
+        oracle_freqs[item] = new_freq
         i += 1
-    return oracle_freqs / np.sum(oracle_freqs)
+    return oracle_freqs
 
 def train_oracle_est(freqs, train_freqs, N):
     oracle_freqs = freqs.copy()
@@ -73,7 +79,7 @@ def train_oracle_est(freqs, train_freqs, N):
             oracle_freqs[item] = train_freqs[item]
         else:
             oracle_freqs[item] = 1/N
-    return oracle_freqs / np.sum(oracle_freqs)
+    return oracle_freqs
 
 
 # %%

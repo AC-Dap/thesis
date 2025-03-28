@@ -33,9 +33,10 @@ if __name__ == "__main__":
         os.mkdir(directory_path)
 
     print("Creating datasets...")
-    write_dataset(a, f"{directory_path}/train.txt")
-    for i in range(N_DATASETS):
-        write_dataset(a, f"{directory_path}/test_{i + 1}.txt")
+    subprocess.run(["python3", "../data/generate_fake_dataset.py", str(a)], cwd="../data")
+
+    print("Processing datasets...")
+    subprocess.run(["python3", "../data/process_fake_dataset.py", str(a)], cwd="../data")
 
     # Run ./out/sim on each dataset
     print("Running simulations...")

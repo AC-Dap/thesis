@@ -6,14 +6,11 @@ CXXFLAGS := -I. -O3 -std=c++20 -MMD -MP
 common_files := common/io/dataset.cc common/io/results.cc common/utils/hashing.cc \
 	common/bucket_sketch.cc common/count_sketch.cc common/ppswor.cc
 
-threshold_files := threshold/sketches/bucket_sketch.cc threshold/sketches/fake_swa.cc \
-	threshold/sketches/swa.cc threshold/simulations.cc
-
 moments_files := moments/sketches/bucket_sketch.cc moments/sketches/fake_swa.cc moments/sketches/parsimonious.cc \
 	moments/sketches/swa.cc moments/simulations.cc
 
-SRC := $(common_files) $(threshold_files) $(moments_files) main.cc
-CAIDA_SRC := $(common_files) $(threshold_files) $(moments_files) run_caida.cc
+SRC := $(common_files) $(moments_files) main.cc
+CAIDA_SRC := $(common_files) $(moments_files) run_caida.cc
 
 # Output files
 OUT_DIR := out

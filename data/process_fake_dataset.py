@@ -15,6 +15,7 @@
 # %%
 import pandas as pd
 import numpy as np
+import sys
 
 
 # %%
@@ -33,6 +34,11 @@ def process_fake_dataset(folder):
                         nextId += 1
                     dst.write(f'{mapping[el]}\n')
 
-process_fake_dataset('fake_0.1_dataset')
-process_fake_dataset('fake_0.3_dataset')
-process_fake_dataset('fake_0.5_dataset')
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Expected usage: process_fake_dataset.py shape_parameter")
+        print("Got:", sys.argv)
+        exit(1)
+
+    a = float(sys.argv[1])
+    process_fake_dataset(f'fake_{a}_dataset')
